@@ -1,0 +1,49 @@
+{
+  "name": "browser-tabletop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Private, reusable browser tables with source-backed Intrilex learning",
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "packageManager": "npm@10.9.2",
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "node --import tsx apps/server/index.ts",
+    "dev:web": "vite --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:e2e": "playwright test",
+    "build": "npm run typecheck && vite build && esbuild apps/server/index.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server/index.js",
+    "start": "node dist/server/index.js",
+    "backup": "node --import tsx apps/server/backup.ts",
+    "restore": "node --import tsx apps/server/restore.ts"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "26.6.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/ws": "8.18.1",
+    "@vitejs/plugin-react": "6.1.1",
+    "concurrently": "10.0.5",
+    "esbuild": "0.28.2",
+    "eslint": "10.11.0",
+    "node": "24.21.0",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.1",
+    "vite": "8.3.1"
+  }
+}

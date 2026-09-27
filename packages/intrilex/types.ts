@@ -1,0 +1,9 @@
+export type Rank = 'A'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'10'|'J'|'Q'|'K'|'RJ'|'BJ';
+export type Suit = '♣'|'♦'|'♥'|'♠'|'joker';
+export interface GameCard { id:string; rank:Rank; suit:Suit; owner:number; tapped?:boolean; hostId?:string }
+export interface GameAction { type:string; cardId?:string; targetId?:string; mode?:string; label:string; ruleRef:string }
+export interface StackItem { id:string; player:number; action:GameAction; card?:GameCard; class:'effect'|'counter'|'anchor'|'goal'|'scuttle'|'action'|'trigger'; target?:string; actionType?:string }
+export interface Choice { player:number; kind:string; prompt:string; cards:GameCard[]; selected:GameCard[]; count:number; data:Record<string,unknown>; public:boolean }
+export interface GamePlayer { hand:GameCard[]; pr:GameCard[]; er:GameCard[]; goal:number; quick2:boolean; disrupted:string[] }
+export interface GameState { version:1; profile:'intrilex-first-contact'; players:GamePlayer[]; deck:GameCard[]; graveyard:GameCard[]; activePlayer:number; phase:'action'|'end'|'finished'; miniTurns:number; turn:number; stack:StackItem[]; priority:number; declines:number; choice:Choice|null; boardLock:{remaining:number;activationTurn:number}|null; exhausted:number|null; winner:number|'draw'|null; history:string[]; sequence:number; events:string[] }
+export interface GameView { profile:'intrilex-first-contact'; players:{hand:GameCard[];handCount:number;pr:GameCard[];er:GameCard[];goal:number;score:number;guard:boolean}[]; hand:GameCard[]; deckCount:number; graveyard:GameCard[]; activePlayer:number; phase:GameState['phase']; miniTurns:number; turn:number; pending:{id:string;player:number;label:string;ruleRef:string;card?:GameCard}[]; priority:number; choice:{player:number;prompt:string;cards:GameCard[]}|null; boardLock:GameState['boardLock']; exhausted:number|null; winner:GameState['winner']; legalActions:GameAction[]; history:string[] }

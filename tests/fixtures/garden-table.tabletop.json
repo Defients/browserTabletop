@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "garden-table",
+  "title": "Garden token table",
+  "description": "Independently authored test template: a seed deck with custom faces, a shared market row, three seats and counters. No rules engine.",
+  "author": "Tabletop test fixture (original)",
+  "profile": "free",
+  "width": 1200,
+  "height": 800,
+  "seats": 3,
+  "background": "#2f4a2a",
+  "zones": [
+    { "id": "market", "name": "Market row", "kind": "table", "visibility": "public", "x": 300, "y": 60, "width": 800, "height": 200 },
+    { "id": "seeds", "name": "Seed bag", "kind": "pile", "visibility": "hidden", "x": 60, "y": 60, "width": 110, "height": 150 },
+    { "id": "compost", "name": "Compost", "kind": "pile", "visibility": "public", "x": 60, "y": 260, "width": 110, "height": 150 },
+    { "id": "plot", "name": "Shared plot", "kind": "table", "visibility": "public", "x": 300, "y": 300, "width": 800, "height": 300 },
+    { "id": "hand-0", "name": "Gardener 1 hand", "kind": "hand", "visibility": "owner", "owner": 0, "x": 60, "y": 680, "width": 300, "height": 100 },
+    { "id": "hand-1", "name": "Gardener 2 hand", "kind": "hand", "visibility": "owner", "owner": 1, "x": 420, "y": 680, "width": 300, "height": 100 },
+    { "id": "hand-2", "name": "Gardener 3 hand", "kind": "hand", "visibility": "owner", "owner": 2, "x": 780, "y": 680, "width": 300, "height": 100 }
+  ],
+  "cards": [
+    { "id": "sprout-1", "rank": "Sprout", "suit": "green", "face": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" },
+    { "id": "sprout-2", "rank": "Sprout", "suit": "green", "face": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" },
+    { "id": "sprout-3", "rank": "Sprout", "suit": "green", "face": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" },
+    { "id": "bloom-1", "rank": "Bloom", "suit": "pink" },
+    { "id": "bloom-2", "rank": "Bloom", "suit": "pink" },
+    { "id": "bloom-3", "rank": "Bloom", "suit": "pink" },
+    { "id": "root-1", "rank": "Root", "suit": "brown" },
+    { "id": "root-2", "rank": "Root", "suit": "brown" },
+    { "id": "root-3", "rank": "Root", "suit": "brown" },
+    { "id": "weed-1", "rank": "Weed", "suit": "grey" },
+    { "id": "weed-2", "rank": "Weed", "suit": "grey" },
+    { "id": "weed-3", "rank": "Weed", "suit": "grey" }
+  ],
+  "decks": [ { "id": "bag", "zone": "seeds", "cards": ["sprout-1", "sprout-2", "sprout-3", "bloom-1", "bloom-2", "bloom-3", "root-1", "root-2", "root-3", "weed-1", "weed-2", "weed-3"] } ],
+  "objects": [
+    { "id": "season", "kind": "counter", "text": "Season", "value": 1, "x": 320, "y": 620, "locked": false },
+    { "id": "water", "kind": "dice", "text": "Rain die", "value": 1, "sides": 4, "x": 480, "y": 620, "locked": false },
+    { "id": "rules", "kind": "note", "text": "Plant a card in the plot to score its number of neighbours.", "value": 0, "x": 640, "y": 620, "locked": true }
+  ],
+  "setup": [ { "op": "shuffle", "zone": "seeds" }, { "op": "place", "zone": "seeds", "target": "market", "count": 3, "faceUp": true }, { "op": "deal", "zone": "seeds", "target": "hand-0", "count": 2 } ],
+  "labels": [ { "text": "Market", "x": 320, "y": 40 } ],
+  "seatLayout": [ { "seat": 0, "x": 200, "y": 660 }, { "seat": 1, "x": 560, "y": 660 }, { "seat": 2, "x": 920, "y": 660 } ]
+}

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { GameAction, GameCard, GameView } from '../../packages/intrilex/types.js';
-import { RULES, explainAction, explainCard } from '../../packages/intrilex/index.js';
+import { RULES, anchorValue, explainAction, explainCard } from '../../packages/intrilex/index.js';
 import type { ClientMessage, ParticipantView } from '../../packages/protocol/index.js';
 import { CardFace, Modal, cardName } from './common.js';
 import { PresenceLayer } from './Presence.js';
@@ -51,6 +51,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
             extraLabel={c.hostId ? `Jack attached to ${cardName(items.find(x => x.id === c.hostId) ?? view.players[owner]!.pr.find(x => x.id === c.hostId) ?? { rank: undefined })}` : undefined}
             onClick={() => pick(c)} onDoubleClick={() => { setInspect(c); onInspectCard?.(); }} />
           {c.hostId && <span className="fc-tag">Jack</span>}
+          {zone === 'er' && !c.hostId && <span className="fc-tag" title={`Anchor value ${anchorValue(c)}`}>⚓ {anchorValue(c)}</span>}
           {full && (c.aegis !== undefined || c.exileBound || c.wildBound || c.playedForEffect) && <span className="full-card-states">{[c.aegis !== undefined && 'Aegis', (c.exileBound || c.wildBound) && 'Exile-bound', c.playedForEffect && 'Played for Effect'].filter(Boolean).join(' · ')}</span>}
           {zone === 'pr' && view.players[owner]!.er.some(j => j.hostId === c.id) && <span className="fc-tag fc-tag-jacked">Jacked +1</span>}
         </div>

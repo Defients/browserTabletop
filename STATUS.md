@@ -1,5 +1,42 @@
 # Status
 
+## ER Anchor value surfaced — September 29, 2026
+
+Fixed the user-reported bug that a King anchored in the Enduring Row did not register its Anchor value (ordinary K = 7, K♠ = 9 per §26 ⦗K⦘).
+
+### Fixed
+
+- `engine.ts` now exports `anchorValue(c)`: untapped Kings carry 7 (K♠ 9), all other Anchors 0; tapped ER cards contribute 0 (§9). ER Anchor value is not Secured PR Points — §8 keeps ER at 0 unless a rule explicitly adds Points.
+- Anchored Kings (single `anchor-K`, Royal Marriage) log their Anchor value on ER entry; the `anchor-K` mode text and `K.anchor` rule summary state 7/9.
+- `GameBoard` renders a `⚓ {value}` tag on every ER Anchor (Attachments excluded) so the value is visible on the board.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| Node tests | PASS — 144/144 (new Anchor-value assertions in `intrilex.effects`) |
+
+## Face-Down Swap Bar fix — September 29, 2026
+
+Fixed the user-reported bug where Face-Down Swap Bar actions failed with "This request could not be completed." `availableActions` emitted `swap-down` with only a slot `mode` and no `cardId`, so `perform` → `takeFromHand` always threw `NOT_IN_HAND`, an engine code absent from `ERROR_TEXT` that fell back to the generic message.
+
+### Fixed
+
+- `availableActions` now enumerates one `swap-down` per face-down slot × hand card (`cardId` set), matching §18 "give 1 card from your hand" and the declared-action revalidation contract.
+- `perform` `swap-down`: removed dead code that cloned/re-handled the taken card before the slot was overwritten; the taken card now enters hand hidden — §18 grants no Revealed-Until-Start (contrast §26 Six Peek, which does).
+- `ERROR_TEXT` gained `INVALID_ACTION`, `ACTION_UNAVAILABLE`, `NOT_IN_HAND` so engine legality failures produce real messages instead of the generic fallback.
+- Known adjacent gap (not fixed here): `PlayerView.revealedHand` is declared and rendered but `projectGame` never populates it, and `revealed` markers are never expired at Start (§10; audit Reveals row).
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| Node tests | PASS — 143/143 (Full suite now 23 tests, including Face-Down Swap regression) |
+
 ## Full-profile generated-play pipeline fixes — September 29, 2026
 
 Fixed the user-reported bug where a generated card that "had to be scrapped" (e.g. a Draw & Cast 10♣) did nothing, and the related generated/composite defects exposed by the same log (a generated `8♣ + 8♦ · Absolute Scuttle` left 8♣ in hand, letting it counter its own play).

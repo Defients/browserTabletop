@@ -109,6 +109,8 @@ export function guarded(s: GameState, controller: number, card?: GameCard): bool
   return s.players[controller]!.er.some(q => q.rank === 'Q' && !q.tapped && !q.hostId && q.id !== card?.id);
 }
 const isAnchor = (c: GameCard) => !c.hostId;
+/** §26 ⦗K⦘ / §9: ER Anchor value — an untapped King Anchor contributes 7 (K♠ 9); other Anchors contribute 0; tapped ER cards contribute 0. */
+export const anchorValue = (c: Pick<GameCard, 'rank' | 'suit' | 'tapped'>) => (c.tapped ? 0 : c.rank === 'K' ? (c.suit === '♠' ? 9 : 7) : 0);
 const rankIndex = (r: Rank) => RANKS.indexOf(r);
 const suitIndex = (s: Suit) => SUITS.indexOf(s);
 /** §19 rank order A<…<K<RJ<BJ; equal standard ranks break ties ♣<♦<♥<♠. */
@@ -161,7 +163,7 @@ const MODES: Record<string, ModeInfo> = {
   'disrupt': { rule: 'J.disrupt', cls: 'effect', timing: 'instant', text: 'Disrupt the pending Action, draw 1' },
   'attach': { rule: 'J.attach', cls: 'effect', timing: 'ordinary', text: 'Jack enemy PR card' },
   'anchor-Q': { rule: 'Q.anchor', cls: 'anchor', timing: 'ordinary', text: 'Queen Anchor: establish Guard' },
-  'anchor-K': { rule: 'K.anchor', cls: 'anchor', timing: 'ordinary', text: 'King Anchor in ER' },
+  'anchor-K': { rule: 'K.anchor', cls: 'anchor', timing: 'ordinary', text: 'King Anchor in ER (Anchor value 7; K♠ 9)' },
   'hand-swap': { rule: 'RJ.modes', cls: 'effect', timing: 'ordinary', text: 'Hand Swap with opponent' },
   'self-reset': { rule: 'RJ.modes', cls: 'effect', timing: 'ordinary', text: 'Self Reset: discard hand, draw that many +3' },
   'attack': { rule: 'RJ.modes', cls: 'effect', timing: 'ordinary', text: 'Opponent Attack: they discard hand, draw 2 fewer' },
@@ -388,7 +390,7 @@ export function availableActions(s: GameState, p: number): GameAction[] {
   const out = s.players[p]!.hand.flatMap(c => quickModes(s, p, c, true));
   if(full(s)&&s.phase==='start') {
     out.push(act('start-action','Finish Start · begin Action Phase','full.start'));
-    if(!s.players[p]!.swapUsed)for(const [slot,x] of s.swapBar!.entries())if(!x.faceUp)out.push(act('swap-down',`Swap face-down slot ${slot+1}`,'full.swap',{mode:String(slot)}));
+    if(!s.players[p]!.swapUsed)for(const [slot,x] of s.swapBar!.entries())if(!x.faceUp)for(const c of s.players[p]!.hand)out.push(act('swap-down',`Swap face-down slot ${slot+1} · give ${cardName(c)}`,'full.swap',{mode:String(slot),cardId:c.id}));
     for(const rank of s.voltage??[])out.push(act('voltage',`Voltage ${rank}`,'full.voltage',{mode:String(rank)}));
     for(const c of [...s.players[p]!.pr,...s.players[p]!.er])if(c.holdCast===p&&!c.tapped&&!protectedCard(c))for(const a of ordinaryModes(s,p,c))out.push({...a,type:'generated-effect',mode:`hold:${a.mode}`});
     return out;
@@ -583,13 +585,12 @@ function perform(g: G, p: number, a: GameAction) {
     case 'voltage': { s.voltage = (s.voltage ?? []).filter(r => r !== Number(a.mode)); log(g, `${P(p)} takes a Voltage ${a.mode} snapshot.`); return; }
     case 'swap-down': {
       const slot = Number(a.mode);
-      const entry = s.swapBar![slot]!;
-      const taken = entry.card; entry.card = { ...taken }; entry.card.id = newId(g); entry.faceUp = false;
+      const taken = s.swapBar![slot]!.card;
       const returned = takeFromHand(g, p, a.cardId);
       s.swapBar![slot]! = { card: returned, faceUp: true };
-      toHand(g, p, taken, true);
+      toHand(g, p, taken);
       s.players[p]!.swapUsed = true;
-      log(g, `${P(p)} swaps a face-down Swap Bar card for ${cardName(returned)} (face-up).`);
+      log(g, `${P(p)} takes a face-down Swap Bar card and returns ${cardName(returned)} face-up.`);
       return;
     }
     case 'swap-draw': {
@@ -882,7 +883,7 @@ function resolveEffect(g: G, item: StackItem, p: number, enemy: number, c: GameC
       if (m === 'anchor-9') for (const n of [...s.players[p]!.er]) if (n.rank === '9' && isAnchor(n)) { removeFromBoard(g, n.id); toGraveyard(g, n); log(g, `${P(p)}'s previous Nine Anchor is Scrapped.`); }
       clean(c); c.owner = p; s.players[p]!.er.push(c);
       if (full(s) && m === 'anchor-Q') aegis(s, c, p); // §26 Queen: entry Aegis blocks effects until next Start
-      log(g, `${cardName(c)} enters ${P(p)}'s Enduring Row${m === 'anchor-Q' ? ' — Guard and Aegis are active' : ''}.`);
+      log(g, `${cardName(c)} enters ${P(p)}'s Enduring Row${anchorValue(c) ? ` — Anchor value ${anchorValue(c)}` : ''}${m === 'anchor-Q' ? ' — Guard and Aegis are active' : ''}.`);
       if (m === 'anchor-9' && s.players[enemy]!.hand.length) {
         log(g, `${P(enemy)}'s hand is revealed: ${s.players[enemy]!.hand.map(cardName).join(', ')}.`);
         setChoice(g, { player: enemy, kind: 'discard', prompt: 'Nine Anchor revealed your hand: discard one card of your choice.', cards: s.players[enemy]!.hand.slice(), public: true, held: false, data: {} });
@@ -989,7 +990,7 @@ function resolveEffect(g: G, item: StackItem, p: number, enemy: number, c: GameC
       const cards = [c!, ...(item.cards ?? [])];
       const queen = cards.find(x => x.rank === 'Q')!, king = cards.find(x => x.rank === 'K')!;
       for (const x of cards) { clean(x); x.owner = p; if (x.rank === 'Q') aegis(s, x, p); s.players[p]!.er.push(x); }
-      log(g, `${P(p)} anchors ${cardName(king)} and ${cardName(queen)} via Royal Marriage.`);
+      log(g, `${P(p)} anchors ${cardName(king)} and ${cardName(queen)} via Royal Marriage — ${cardName(king)} Anchor value ${anchorValue(king)}.`);
       return;
     }
     // ---- Full-profile Super modes ----

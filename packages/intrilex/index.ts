@@ -1,6 +1,6 @@
 export type * from './types.js';
 export {
-  RANKS, SUITS, GOAL, GameError, pointValue, cardName, score, guarded, outranks, canScuttle, createGame, availableActions,
+  RANKS, SUITS, GOAL, GameError, pointValue, anchorValue, cardName, score, guarded, outranks, canScuttle, createGame, availableActions,
   applyGame, projectGame, explainAction, explainCard, responseActions, assertGameIntegrity, everyCard, modeInfo, secureRandom,
 } from './engine.js';
 export { RULES, ruleText, type RuleEntry } from './rules.js';

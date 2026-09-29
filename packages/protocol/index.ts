@@ -88,5 +88,8 @@ export const ERROR_TEXT: Record<string, string> = {
   RECOVERY_INVALID: 'That recovery code is not valid.',
   SPECTATOR_INVITATION_READ_ONLY: 'You joined with a spectator invitation, which is read-only.',
   TRANSFER_HOST_FIRST: 'Transfer host to another participant before leaving.',
+  INVALID_ACTION: 'That action was not understood. Reload the page and try again.',
+  ACTION_UNAVAILABLE: 'That action is not legal right now. Check whose decision it is.',
+  NOT_IN_HAND: 'That card is not in your hand.',
 };
 export const errorText = (code: string) => ERROR_TEXT[code] ?? 'This request could not be completed.';

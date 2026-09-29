@@ -1,4 +1,23 @@
-# Latest handoff: Full-profile generated-play pipeline fixed
+# Latest handoff: Face-Down Swap Bar fixed
+
+Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+Fixed the reported bug where Face-Down Swap Bar actions always failed with "This request could not be completed." The generated `swap-down` action carried only a slot `mode`, never the `cardId` of the hand card to give, so `perform` → `takeFromHand` threw `NOT_IN_HAND`; that engine code had no `ERROR_TEXT` entry, so the client showed the generic fallback.
+
+Changes in `packages/intrilex/engine.ts`: `availableActions` enumerates one `swap-down` per face-down slot × hand card; the `perform` case drops dead pre-overwrite slot mutation and no longer marks the taken card Revealed-Until-Start (§18 grants none — only §26 Six Peek does). `packages/protocol/index.ts` maps `INVALID_ACTION`, `ACTION_UNAVAILABLE`, `NOT_IN_HAND` to real messages. Regression test added (`tests/intrilex.full.test.ts`, 23 Full tests). Gates: lint, typecheck, 143/143 Node tests pass. Recorded in `STATUS.md`.
+
+**Follow-up gap found while tracing (unfixed):** `PlayerView.revealedHand` is declared and rendered in `GameBoard` but `projectGame` never populates it, and §10 "hide Revealed-Until-Start at recorded Start + rotate handle" is unimplemented — no `revealed` expiry in `startTurn`. Affects Peek, Raid, Anchor-Ace capture, Face-Up Draw, Exile rummage/recovery, Stack Theft.
+
+### Ranked next steps
+
+1. Implement the Reveals gap above (project `revealedHand`; expire `revealed` at Start with handle rotation).
+2. Continue expanding Full coverage per `docs/INTRILEX_FULL_AUDIT.md` (Voltage, BJ recycle, Sudden Death endgame).
+3. Obtain rules-owner rulings for source-map D-1 and D-3.
+4. Configure/deploy the separate multiplayer server only when authorized; keep the Neocities server origin blank.
+
+---
+
+# Previous handoff: Full-profile generated-play pipeline fixed
 
 Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
 

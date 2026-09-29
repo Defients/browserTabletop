@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fixture, projectGame, score } from '../packages/intrilex/index.js';
+import { anchorValue, fixture, projectGame, score } from '../packages/intrilex/index.js';
 import { act, choose, effect, has, id, legal, passAll, play, zoneOf } from './helpers/game.js';
 
 const NO = ['6♣', '10♣', '4♥', '5♥', '2♠', 'Q♣'];
@@ -222,6 +222,22 @@ test('K.anchor / Q.anchor §26: Anchors enter ER; Queen establishes Guard', () =
   s = passAll(effect(s, 0, 'K♦', 'anchor-K'));
   assert.equal(zoneOf(s, 'K♦'), 'er-0');
   assert.equal(score(s, 0), 0, 'ER contributes no Points (§8)');
+});
+
+test('K.anchor §26 ⦗K⦘: ER Anchor value is 7 for an ordinary King and 9 for K♠; tapped Anchors contribute 0 (§9)', () => {
+  let s = fixture({ hands: [['K♦', '10♦'], NO] });
+  s = passAll(effect(s, 0, 'K♦', 'anchor-K'));
+  const kd = s.players[0]!.er.find(c => c.rank === 'K')!;
+  assert.equal(anchorValue(kd), 7);
+  assert.equal(score(s, 0), 0, 'Anchor value does not add to Secured PR Points (§8)');
+  kd.tapped = true;
+  assert.equal(anchorValue(kd), 0);
+  s = fixture({ hands: [['K♠', '10♦'], NO] });
+  s = passAll(effect(s, 0, 'K♠', 'anchor-K'));
+  assert.equal(anchorValue(s.players[0]!.er[0]!), 9);
+  s = fixture({ hands: [['Q♦', '10♦'], NO] });
+  s = passAll(effect(s, 0, 'Q♦', 'anchor-Q'));
+  assert.equal(anchorValue(s.players[0]!.er[0]!), 0, 'Queen Anchor value is 0');
 });
 
 test('RJ.modes §26 ⦗RJ⦘: Hand Swap, Self Reset (+3), Opponent Attack (−2), Shuffle Reset (DP+GY, draw 2)', () => {

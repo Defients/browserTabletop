@@ -48,7 +48,7 @@ export const RULES: Record<string, RuleEntry> = Object.fromEntries([
   r('J.attach', '§26 ⦗J⦘ ⚓ Attachment — Jack PR', 'Jack Attachment', 'Attach to a Vulnerable enemy PR card: you control it, it scores for you with +1. Aces and Jokers in PR cannot be Jacked.'),
   r('Q.anchor', '§26 ⦗Q⦘ Queen in ER', 'Queen Anchor', 'Place the Queen in ER as an Anchor. While untapped it provides Guard.'),
   r('K.counter', '§26 ⦗K⦘ Instant — Counter Anchor or Goal', 'King counter', 'Counter a pending single-card Anchor play or Goal-Mod play.'),
-  r('K.anchor', '§26 ⦗K⦘ ⚓ Anchor', 'King Anchor', 'Place the King in ER as an Anchor.'),
+  r('K.anchor', '§26 ⦗K⦘ ⚓ Anchor', 'King Anchor', 'Place the King in ER as an Anchor worth 7 Anchor value (K♠ is worth 9).'),
   r('RJ.modes', '§26 ⦗RJ⦘', 'Red Joker', 'Choose Hand Swap, Self Reset (+3), Opponent Attack (−2), or Shuffle Reset (DP+GY, draw 2; only ⭐A could counter it).'),
   r('BJ.score', '§26 ⦗BJ⦘ Scoring', 'Black Joker score', 'Scores 11. Cannot be Scuttled or Jacked in PR. Its Exile Recycle rider is disabled in First Contact.'),
   r('BJ.lock', '§26 ⦗BJ⦘ Quick — Board Lock', 'Board Lock', 'During your own turn with an empty stack: for this and two subsequent completed Full Turns, nobody may declare non-counter Effects or Scuttle. Only ⭐A (absent in First Contact) can counter it.'),

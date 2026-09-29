@@ -62,6 +62,31 @@ test('Full §25 Exile is public and ordered while ordinary hidden zones remain p
   }
 });
 
+test('Full §18 Face-Down Swap: take a face-down bar card, return a hand card face-up, once per FT', () => {
+  let s = fixture({ profile, active: 1, miniTurns: 0, hands: [quiet, ['5♣']], swapBar: [{ card: 'K♥', faceUp: false }, { card: '4♠', faceUp: false }, { card: '9♦', faceUp: true }] });
+  s = play(s, 1, 'end');
+  assert.equal(s.phase, 'start');
+  const swaps = legal(s, 0).filter(a => a.type === 'swap-down');
+  assert.equal(swaps.length, 4, 'each face-down slot × each hand card');
+  assert.ok(swaps.every(a => a.cardId && s.players[0]!.hand.some(c => c.id === a.cardId)));
+  assert.throws(() => applyGame(s, 0, { type: 'swap-down', mode: '0' }), 'a slot without a given hand card is not a legal swap');
+  s = act(s, 0, a => a.type === 'swap-down' && a.mode === '0' && a.cardId === id(s, '6♣'));
+  assert.deepEqual(s.swapBar!.map(x => x.faceUp), [true, false, true]);
+  assert.deepEqual([s.swapBar![0]!.card.rank, s.swapBar![0]!.card.suit], ['6', '♣']);
+  const taken = s.players[0]!.hand.find(c => c.rank === 'K' && c.suit === '♥')!;
+  assert.ok(taken, 'the face-down card entered the hand');
+  assert.equal(taken.revealed, undefined, '§18 grants no Revealed-Until-Start on a Face-Down Swap');
+  assert.ok(!s.players[0]!.hand.some(c => c.rank === '6' && c.suit === '♣'));
+  assert.ok(s.players[0]!.swapUsed);
+  assert.ok(!legal(s, 0).some(a => a.type === 'swap-down'), 'the Swap Bar use is spent');
+  assert.ok(legal(s, 0).some(a => a.type === 'start-action'), 'the swap is free; the Start Phase continues');
+  const opp = projectGame(s, 1);
+  assert.equal(opp.swapBar![0]!.card!.rank, '6', 'the returned card is face-up and public');
+  assert.ok(!JSON.stringify(opp).includes(taken.id), 'the taken card stays hidden from the opponent');
+  s = act(s, 0, a => a.type === 'start-action');
+  assert.ok(!legal(s, 0).some(a => a.type === 'swap-draw'), 'Face-Up Draw shares the once-per-FT use');
+});
+
 test('Full §5 forged commands are rejected without mutating state or spending an Action', () => {
   const s = fixture({ profile, hands: [['Q♣', '10♦'], quiet] });
   const before = JSON.stringify(s);

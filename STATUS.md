@@ -19,7 +19,14 @@ Windows, system Node 22.14.0 / npm 10.9.2; npm scripts run on project-local Node
 
 ### Final release gates (isolated clean copy of the final tree)
 
-RESULTS_PLACEHOLDER
+| Run | Tree | ci | lint | typecheck | test | test:e2e | build | start/backup/restore |
+|---|---|---|---|---|---|---|---|---|
+| A | prior | ✓ 0 vulns | ✗ 3 → fixed | ✓ | 115/115 | 22/22 | ✓ | ✓ (Node 22.14 + 24) |
+| B | prior | ✓ | ✓ | ✓ | 115/115 | 21/22 (harness race, fixed in `e2e/fc.ts`) | ✓ | — |
+| targeted | after fix | — | — | — | — | walkthrough+learn ×3, both engines: 18/18 | — | — |
+| **C** | **final** | **interrupted — not completed** | | | | | | |
+
+**Final-tree gate run is still owed** — see `HANDOFF.md` §5 step 1.
 
 ### Open items
 - **Rules rulings requested** (outcome-changing, implemented conservatively): D-1 enabled-effect list reading; D-3 2 Solo Wild disabled.

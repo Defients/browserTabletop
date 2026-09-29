@@ -1,5 +1,7 @@
 # Browser Tabletop
 
+> Resuming work? Start with `HANDOFF.md` (current state, verification record, ranked next steps).
+
 Independent project. `sources/BROWSER_TABLETOP_MASTER_PROMPT.md` is the complete contract; the supplied Intrilex v4.3.1 rulebook (SHA-256 1CFBD837…BCF8) is canonical. No runtime dependency on the old Intrilex app. No publication or public deployment.
 
 ## Invariants

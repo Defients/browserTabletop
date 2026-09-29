@@ -1,5 +1,33 @@
 # Status
 
+## Full-profile generated-play pipeline fixes — September 29, 2026
+
+Fixed the user-reported bug where a generated card that "had to be scrapped" (e.g. a Draw & Cast 10♣) did nothing, and the related generated/composite defects exposed by the same log (a generated `8♣ + 8♦ · Absolute Scuttle` left 8♣ in hand, letting it counter its own play).
+
+### Fixed
+
+- `resolveChoice` now handles `generated-scrap`: the held card is detached from its lingering zone (hand after Draw & Cast, GY mill after Super-5, Swap Bar after Peek) and Scrapped to GY. `MODES['generated-scrap']` no longer throws.
+- Generated/composite `cardIds` extras are committed from hand at declaration and stored on the stack item (`item.cards`); all composite sources are Scrapped to GY on resolve, counter or fizzle.
+- Prefixed modes resolve through `infoFor`'s normalisation: `wild-*` (inner Base effect; Wild-4 cost committed; K♠ marked Wild-Exile-Bound), `mimic:*` (consumes Rank-10 usage; resolves the copied Super), `ultra-black:*` (score one source, cast one as an internal sub-effect, Exile the third; consumes the Ultra limit at declaration), `hold:*` (⭐2-held cards cast from the Start Phase as generated child plays).
+- Stack items now stamp `tier` (`super`/`ultra`/`sudden`) and Royal-Shield `shield`, so Ace/King counter authority matches §9.4/§16.1.
+- Scuttle resolution is mode-aware: ⭐8 Absolute ignores rank/suit/ordinary immunity, 8♠ Free ignores rank/suit, ordinary Scuttle unchanged; the GY bonus is ordinary-8-only.
+- A♠ Exile Counter sends countered sources to Exile; the countered 3 Red Ultra returns the bottom GY card to hand.
+- `startTurn` resets the per-Full-Turn limits (Ultra, Quick Queen, Court, Rank-10) and untaps ⭐2-held cards at their controller's Start; Nine Tap sets `tapUntil: 'score'`.
+- Peek removes taken/played cards from the Swap Bar; generated choices propagate the Topdeck recursion marker.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| Node tests | PASS — 142/142 (Full-profile suite now 22 tests, including generated-scrap, composite-commit/counter, Absolute/Free Scuttle, Wild/Mimic, Ultra tier, ⭐2 Hold, Exile Counter, Nine Tap) |
+| Production build | PASS |
+
+Interpretations are recorded in `docs/INTRILEX_SOURCE_MAP.md` (Generated/composite resolution semantics). No public deployment, commit, or push occurred.
+
+---
+
 ## Intrilex Full-profile engine implementation — September 29, 2026
 
 Reconstructed the Full-profile engine layer in `packages/intrilex/engine.ts` after an accidental `git checkout` had reverted the uncommitted work. The First Contact baseline is preserved; Full behavior branches on `full(s)`.

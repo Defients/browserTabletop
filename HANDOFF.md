@@ -1,3 +1,22 @@
+# Latest handoff: Full-profile generated-play pipeline fixed
+
+Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+Fixed the reported bug where a generated card that had to be Scrapped (Draw & Cast 10♣) silently did nothing: `choiceActions` offered `generated-scrap` but `resolveChoice` had no branch for it, so `MODES['generated-scrap']` was undefined. The same log exposed a second defect — generated composite plays (`8♣ + 8♦ · Absolute Scuttle`) never committed their partner `cardIds` from hand, so the 8♣ could counter the play it was part of.
+
+Fixes are in `packages/intrilex/engine.ts` (+ `tapUntil: 'hold'` in `packages/intrilex/types.ts`): explicit `generated-scrap` → GY, held-card detachment from lingering zones (hand/GY/Swap Bar), composite `cardIds` commitment onto `item.cards` with scrapping on resolve/counter/fizzle, prefixed-mode normalisation (`wild-*`, `mimic:*`, `ultra-black:*`, `hold:*`), stack `tier`/`shield` for counter authority, mode-aware Scuttle legality (ordinary/Free/Absolute, ordinary-8-only bonus), A♠ Exile Counter, countered-3-Red rider, ⭐2 Hold untap-at-Start + hold-cast, per-FT limit resets, Nine `tapUntil: 'score'`, Peek Swap Bar removal, Topdeck recursion marker propagation.
+
+Regression tests added in `tests/intrilex.full.test.ts` (22 Full tests now). Gates: lint, typecheck and all 142 Node tests pass. `STATUS.md` has the gate table; `docs/INTRILEX_SOURCE_MAP.md` records the resolution interpretations. D-1/D-3 rulings still pending — do not silently decide. No public deployment, commit, or push.
+
+### Ranked next steps
+
+1. Continue expanding Full coverage per `docs/INTRILEX_FULL_AUDIT.md` (Voltage, Swap Bar journeys, BJ recycle, Sudden Death endgame).
+2. Obtain rules-owner rulings for source-map D-1 and D-3.
+3. Configure/deploy the separate multiplayer server only when authorized; keep the Neocities server origin blank.
+4. Re-run `npm run build`/`build:neocities` and e2e before any packaging.
+
+---
+
 # Latest handoff: Intrilex Full-profile engine reconstructed
 
 Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.

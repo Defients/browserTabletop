@@ -8,7 +8,7 @@ export type Random = () => number;
  * `owner` is the player under whose control the card entered OTT (−1 when not OTT); used for Attachment
  * restoration and Purge (§12, §26 A Purge) because First Contact players share one deck.
  */
-export interface GameCard { id: string; rank: Rank; suit: Suit; owner: number; tapped?: boolean; hostId?: string; aegis?: number; tapUntil?: number | 'score'; revealed?: number; exileBound?: boolean; wildBound?: boolean; playedForEffect?: boolean; holdCast?: number }
+export interface GameCard { id: string; rank: Rank; suit: Suit; owner: number; tapped?: boolean; hostId?: string; aegis?: number; tapUntil?: number | 'score' | 'hold'; revealed?: number; exileBound?: boolean; wildBound?: boolean; playedForEffect?: boolean; holdCast?: number }
 
 export type MiniTurnType = 'draw' | 'score' | 'effect' | 'scuttle' | 'swap-draw' | 'draw-cast';
 export type ActionType = MiniTurnType | 'counter' | 'decline' | 'end' | 'exhausted-pass' | 'choose' | 'generated-effect' | 'start-action' | 'swap-down' | 'voltage';

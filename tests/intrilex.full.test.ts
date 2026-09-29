@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { applyGame, assertGameIntegrity, createGame, everyCard, fixture, projectGame, seeded } from '../packages/intrilex/index.js';
-import { act, effect, id, legal, passAll, play } from './helpers/game.js';
+import { act, choose, effect, id, legal, passAll, play } from './helpers/game.js';
 
 const profile = 'intrilex-full' as const;
 const quiet = ['6♣', '5♥'];
@@ -151,4 +151,144 @@ test('Full §14 Aegis blocks friendly effects and ordinary Scuttle; Nines cannot
   s.players[1]!.pr[0]!.aegis = 20;
   assert.ok(!legal(s, 0).some(a => a.mode === 'bounce-top' && a.targetId === id(s, '6♦')));
   assert.ok(!legal(s, 0).some(a => a.type === 'scuttle' && a.targetId === id(s, '7♥')));
+});
+
+test('Full Scrapping Generated Cards: a generated card with no legal declaration is Scrapped to GY', () => {
+  let s = fixture({ profile, hands: [['5♣'], quiet], deckTop: ['10♣', '3♣', '4♣'] });
+  s = play(s, 0, 'draw-cast');
+  s = passAll(s);
+  assert.equal(s.choice?.kind, 'generated');
+  assert.deepEqual(legal(s, 0).map(a => a.mode), ['generated-scrap'], '10♣ has no legal generated declaration');
+  s = choose(s, 0, 'generated-scrap', '10♣');
+  assert.equal(s.choice, null);
+  assert.ok(s.graveyard.some(c => c.rank === '10' && c.suit === '♣'), 'scrapped generated card reached GY');
+  assert.ok(!s.players[0]!.hand.some(c => c.rank === '10'));
+});
+
+test('Full generated composite plays commit every source; counters scrap them all', () => {
+  let s = fixture({ profile, hands: [['7♦', '8♣'], ['8♥', '6♠']], pr: [[], ['9♥']], deckTop: ['8♦', '3♠'] });
+  s = passAll(effect(s, 0, '7♦', 'seven'));
+  s = choose(s, 0, 'select', '3♠'); // take 3♠; 8♦ becomes the generated play
+  const gen = legal(s, 0).find(a => a.type === 'generated-effect' && a.mode === 'super-8');
+  assert.ok(gen, 'generated 8♦ may combine with the 8♣ already in hand');
+  s = act(s, 0, a => a.type === 'generated-effect' && a.mode === 'super-8');
+  const item = s.stack.at(-1)!;
+  assert.equal(item.cls, 'scuttle');
+  assert.equal(item.cards!.length, 1, 'the partner 8♣ is committed to the stack item');
+  assert.ok(!s.players[0]!.hand.some(c => c.rank === '8' && c.suit === '♣'), 'committed 8♣ left the hand');
+  s = act(s, 1, a => a.type === 'counter' && a.mode === 'counter');
+  s = passAll(s);
+  assert.ok(s.graveyard.some(c => c.rank === '8' && c.suit === '♣'), 'committed source scrapped on counter');
+  assert.ok(s.graveyard.some(c => c.rank === '8' && c.suit === '♦'), 'generated source scrapped on counter');
+});
+
+test('Full ⭐8 Absolute Scuttle ignores rank, suit and ordinary Scuttle immunity; no Eight bonus', () => {
+  let s = fixture({ profile, hands: [['8♣', '8♦'], quiet], pr: [[], ['A♥', '5♦']] });
+  const supers = legal(s, 0).filter(a => a.type === 'effect' && a.mode === 'super-8');
+  assert.equal(supers.length, 2, 'every non-Aegised enemy PR card is a legal target');
+  s = act(s, 0, a => a.mode === 'super-8' && a.targetId === id(s, 'A♥'));
+  s = passAll(s);
+  assert.ok(s.graveyard.some(c => c.rank === 'A' && c.suit === '♥'), 'a Scuttle-immune Ace was Absolute-Scuttled');
+  assert.equal(s.choice, null, 'the Eight Scuttle bonus is for ordinary Scuttles only');
+  assert.deepEqual(s.graveyard.filter(c => c.rank === '8').map(c => c.suit).sort(), ['♣', '♦'].sort(), 'both Super sources were scrapped');
+});
+
+test('Full 8♠ Free Scuttle ignores rank and suit but still respects immunity', () => {
+  let s = fixture({ profile, hands: [['6♥'], ['8♠', '3♦']], pr: [['K♣', 'A♣'], []] });
+  s = play(s, 0, 'score', '6♥');
+  const frees = legal(s, 1).filter(a => a.mode === 'free-scuttle');
+  assert.deepEqual(frees.map(a => a.targetId), [id(s, 'K♣')], 'K♣ outranks 8♠ yet is legal; the immune A♣ is not');
+  s = act(s, 1, a => a.mode === 'free-scuttle');
+  s = passAll(s);
+  assert.ok(s.graveyard.some(c => c.rank === 'K' && c.suit === '♣'), 'higher-rank K♣ was Free-Scuttled');
+  assert.ok(s.players[0]!.pr.some(c => c.rank === 'A'), 'the immune Ace stayed');
+  assert.equal(s.choice, null, 'no Eight bonus on a Free Scuttle');
+});
+
+test('Full Solo Wild resolves the copied Base effect; K♠ Wild Sovereignty pays its cost and Exiles', () => {
+  let s = fixture({ profile, hands: [['2♥'], quiet] });
+  assert.ok(legal(s, 0).some(a => a.mode === 'wild-6:dig'), '2♥ may copy the 6♥ Base effect');
+  s = effect(s, 0, '2♥', 'wild-6:dig');
+  s = passAll(s);
+  assert.equal(s.choice?.kind, 'dig-mode', 'the copied Dig resolved');
+  s = act(s, 0, a => a.mode === 'dig-discard');
+  assert.ok(s.graveyard.some(c => c.rank === '2' && c.suit === '♥'), 'the Wild copy card proceeded to GY');
+
+  s = fixture({ profile, hands: [['K♠', '9♦'], quiet], pr: [[], ['7♣']] });
+  const wild = legal(s, 0).find(a => a.mode === 'wild-4:total-clear');
+  assert.equal(wild!.targetIds!.length, 1, 'the 4♠ copy declares a discard cost');
+  s = act(s, 0, a => a.mode === 'wild-4:total-clear');
+  assert.equal(s.players[0]!.hand.length, 0, 'the cost card is paid at declaration');
+  s = passAll(s);
+  assert.equal(s.players[1]!.pr.length, 0, 'Total Clear resolved');
+  assert.ok(s.exile!.some(c => c.rank === 'K' && c.suit === '♠'), 'Wild-Exile-Bound K♠ went to Exile');
+  assert.ok(s.graveyard.some(c => c.rank === '9' && c.suit === '♦'), 'the discard cost is never refunded');
+});
+
+test('Full 10♦ Mimic resolves the copied Super, consumes the Rank-10 play and Exiles the 10', () => {
+  let s = fixture({ profile, hands: [['10♦', '2♣'], quiet] });
+  assert.ok(legal(s, 0).some(a => a.mode === 'mimic:super-6'), '10♦ + 2 may mimic a Super');
+  s = act(s, 0, a => a.mode === 'mimic:super-6');
+  s = passAll(s);
+  assert.ok(s.players[0]!.tenUsed, 'Mimic consumes the per-FT Rank-10 limit');
+  assert.ok(s.exile!.some(c => c.rank === '10' && c.suit === '♦'), 'the resolved Rank-10 effect play is Exile-Bound');
+  assert.ok(s.graveyard.some(c => c.rank === '2' && c.suit === '♣'), 'the paired 2 went to GY');
+  assert.equal(s.players[0]!.hand.length, 4, 'Super Dig kept four');
+});
+
+test('Full Ultras consume the per-FT limit at declaration and resist everything but ⭐A', () => {
+  let s = fixture({ profile, hands: [['3♣', '4♠', '6♣'], ['A♣', 'A♦', 'A♥', 'K♠']], deckTop: ['2♥', '9♣', 'J♦', 'Q♣', '5♠', '8♥', '10♠'] });
+  s = act(s, 0, a => a.mode === 'ultra-black:dig');
+  const ultra = s.stack.at(-1)!;
+  assert.equal(ultra.tier, 'ultra');
+  assert.ok(s.players[0]!.ultraUsed, 'the Ultra limit is consumed on declaration');
+  const answers = legal(s, 1).filter(a => a.type === 'counter' && a.targetId === ultra.id);
+  assert.equal(answers.length, 3, 'only ⭐A may answer an Ultra');
+  assert.ok(answers.every(a => a.mode === 'super-A'));
+  s = passAll(s);
+  assert.equal(s.players[0]!.pr.length, 1, 'the score role landed');
+  assert.equal(s.exile!.length, 1, 'the exile role landed');
+  assert.equal(s.choice?.kind, 'dig-mode', 'the cast role resolved as an internal sub-effect');
+  s = act(s, 0, a => a.mode === 'dig-discard');
+  assert.ok(s.graveyard.some(c => c.rank === '6' && c.suit === '♣'), 'the cast card reached GY after its sub-effect');
+});
+
+test('Full ⭐2 Hold keeps the card OTT tapped; it untaps at its controller\u2019s Start and casts for free', () => {
+  let s = fixture({ profile, active: 1, hands: [quiet, ['2♣', '2♦']], pr: [['6♥'], []] });
+  s = act(s, 1, a => a.mode === 'super-2-hold');
+  s = passAll(s);
+  const held = s.players[1]!.pr.find(c => c.rank === '6' && c.suit === '♥')!;
+  assert.ok(held.tapped && held.holdCast === 1 && held.tapUntil === 'hold', 'held OTT under the new controller, tapped until next Start');
+  s = play(s, 1, 'end');
+  s = act(s, 0, a => a.type === 'start-action');
+  s = passAll(play(s, 0, 'draw'));
+  s = play(s, 0, 'end');
+  assert.equal(s.activePlayer, 1);
+  assert.ok(!s.players[1]!.pr[0]!.tapped, 'the held card untapped at its controller\u2019s Start');
+  assert.ok(legal(s, 1).some(a => a.mode === 'hold:dig'), 'the held card may cast as a Start child play');
+  s = act(s, 1, a => a.mode === 'hold:dig');
+  s = passAll(s);
+  assert.equal(s.choice?.kind, 'dig-mode');
+  s = act(s, 1, a => a.mode === 'dig-discard');
+  assert.ok(!s.players[1]!.pr.some(c => c.holdCast === 1), 'the held card left OTT to resolve its effect');
+  assert.ok(s.graveyard.some(c => c.rank === '6' && c.suit === '♥'), 'then proceeded to its normal effect destination');
+});
+
+test('Full A♠ Exile Counter sends countered sources to Exile instead of GY', () => {
+  let s = fixture({ profile, hands: [['6♦'], ['A♠', '6♣']] });
+  s = effect(s, 0, '6♦', 'dig');
+  s = act(s, 1, a => a.type === 'counter' && a.mode === 'exile-counter');
+  s = passAll(s);
+  assert.ok(s.exile!.some(c => c.rank === '6' && c.suit === '♦'), 'countered source went to Exile');
+  assert.ok(!s.graveyard.some(c => c.rank === '6' && c.suit === '♦'));
+});
+
+test('Full Nine Tap sets the score-release condition', () => {
+  let s = fixture({ profile, hands: [['6♦'], ['9♣', '3♥']], pr: [['7♦'], []] });
+  s = effect(s, 0, '6♦', 'dig');
+  s = act(s, 1, a => a.mode === 'tap' && a.targetId === id(s, '7♦'));
+  s = passAll(s);
+  const tapped = s.players[0]!.pr.find(c => c.rank === '7')!;
+  assert.ok(tapped.tapped);
+  assert.equal(tapped.tapUntil, 'score');
 });

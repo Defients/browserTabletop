@@ -46,8 +46,20 @@ Test names refer to `tests/*.test.ts` (Node test runner) and `e2e/*.spec.ts` (Pl
 | 39 | Real devices / WebKit | — | — | not available on this Windows host | UNVERIFIED |
 | 40 | Backup and restore into fresh destination | `backup.ts`, `restore.ts` | backup.test | — | VERIFIED |
 | 41 | Health/readiness, graceful shutdown | `/health`, `/ready`, signal handler | server.test: robustness (/health) | walkthrough (restart) | VERIFIED |
-| 42 | Container / deployment configuration | `Dockerfile`, `compose.yaml`, OPERATIONS.md | — | Docker not installed here | UNVERIFIED |
+| 42 | Container / deployment configuration | `Dockerfile`, `compose.yaml`, OPERATIONS.md | — | Docker unavailable on September 29, 2026 | UNVERIFIED |
 | 43 | Documentation set | README, docs/*, NOTICE.md | — | — | VERIFIED |
-| 44 | Clean-checkout install and gates | — | isolated copy run (STATUS.md) | — | VERIFIED |
+| 44 | Clean-checkout install and gates | — | September 29, 2026 isolated clean install; 115/115 Node + 22/22 browser; input hashes/logs in artifacts/verification | — | VERIFIED |
 | 45 | Public deployment | — | — | — | OUT_OF_SCOPE (not authorised) |
 | 46 | Full Core / optional-module adjudication | — | — | — | OUT_OF_SCOPE (contract defers it) |
+
+## Neocities deployment profile (September 29, 2026)
+
+| Requirement | Evidence | Status |
+|---|---|---|
+| Static root/subdirectory hosting, relative assets and hash routes | `vite.config.ts`, `e2e-static/neocities.spec.ts` (plain subdirectory file server) | VERIFIED |
+| Local play/save, lesson and template export/import without API calls | Static browser test, CSP `connect-src 'none'`, Chromium + Firefox | VERIFIED |
+| Separate first-party multiplayer with selected template, invitation, guest join and reload | Static handoff browser test against genuine production backend, Chromium + Firefox | VERIFIED |
+| Runtime multiplayer URL validation | `tests/hosting.test.ts`; empty configuration browser paths | VERIFIED |
+| Live Neocities account upload and public HTTPS multiplayer endpoint | Not configured or deployed; actual endpoint still needed | UNVERIFIED |
+
+Current continuation results: 116 Node tests, 22 standard browser tests and 4 static/handoff browser tests passed. Previous clean-install evidence remains a baseline; current executable input hashes and logs use the `neocities-` prefix in `artifacts/verification/`.

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { errorText, parseServerMessage, type ClientMessage, type CommandResponse, type RoomCommand, type RoomView, type Surface } from '../../packages/protocol/index.js';
+import { STATIC_HOST } from './hosting.js';
 
 export class ApiFailure extends Error { constructor(public code: string, public view?: RoomView) { super(errorText(code)); } }
 
@@ -12,6 +13,7 @@ async function ensureSession() {
 }
 
 export async function api<T>(path: string, body?: unknown): Promise<T> {
+  if (STATIC_HOST) throw new ApiFailure('SERVICE_UNAVAILABLE');
   let response: Response;
   try {
     await ensureSession();
@@ -30,7 +32,7 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
   return data as T;
 }
 
-export const serviceAvailable = () => fetch('/ready').then(r => r.ok).catch(() => false);
+export const serviceAvailable = () => STATIC_HOST ? Promise.resolve(false) : fetch('/ready').then(r => r.ok).catch(() => false);
 
 // ---------------------------------------------------------------- presence (outside React state)
 

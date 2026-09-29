@@ -16,9 +16,9 @@ function Offline() {
   return <p className="notice" role="alert">The table service is not reachable, so online tables are unavailable right now. <a href="#/practice/first-contact">Local practice</a> still works.</p>;
 }
 
-export function CreateRoom({ online }: { online: boolean | null }) {
+export function CreateRoom({ online, initialTemplate }: { online: boolean | null; initialTemplate?: string }) {
   const templates = useMemo(allTemplates, []);
-  const [templateId, setTemplateId] = useState(() => sessionStorage.getItem('tabletop.createTemplate') ?? templates[0]!.id);
+  const [templateId, setTemplateId] = useState(() => initialTemplate ?? sessionStorage.getItem('tabletop.createTemplate') ?? templates[0]!.id);
   const [nickname, setNickname] = useState(() => loadLocal(NICK, ''));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

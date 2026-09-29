@@ -1,0 +1,60 @@
+
+> browser-tabletop@1.0.0 test:neocities
+> npm run build && npm run build:neocities && playwright test --config playwright.neocities.config.ts
+
+
+> browser-tabletop@1.0.0 build
+> npm run typecheck && vite build && esbuild apps/server/index.ts apps/server/backup.ts apps/server/restore.ts --bundle --platform=node --format=esm --packages=external --outdir=dist/server
+
+
+> browser-tabletop@1.0.0 typecheck
+> tsc --noEmit
+
+vite v8.3.1 building client environment for production...
+transforming...
+✓ 39 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/index.html                   0.60 kB │ gzip:   0.39 kB
+dist/client/assets/index-BzXNueo7.css   30.87 kB │ gzip:   8.05 kB
+dist/client/assets/index-DujXFD8w.js   402.89 kB │ gzip: 123.63 kB
+
+✓ built in 1.21s
+
+  dist\server\index.js    132.1kb
+  dist\server\restore.js    1.5kb
+  dist\server\backup.js     1.2kb
+
+Done in 21ms
+
+> browser-tabletop@1.0.0 build:neocities
+> npm run typecheck && vite build --mode neocities
+
+
+> browser-tabletop@1.0.0 typecheck
+> tsc --noEmit
+
+vite v8.3.1 building client environment for neocities...
+transforming...
+<script src="./site-config.js"> in "/index.html" can't be bundled without type="module" attribute
+✓ 39 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/neocities/index.html                   0.60 kB │ gzip:   0.39 kB
+dist/neocities/assets/index-BzXNueo7.css   30.87 kB │ gzip:   8.05 kB
+dist/neocities/assets/index-BOo3dwvp.js   403.83 kB │ gzip: 123.87 kB
+
+✓ built in 220ms
+
+Running 4 tests using 1 worker
+
+(node:22796) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [chromium] › e2e-static\neocities.spec.ts:39:1 › static subdirectory: no network service calls, local persistence, lesson and template export/import (1.5s)
+  ok 2 [chromium] › e2e-static\neocities.spec.ts:73:1 › Neocities entry opens first-party multiplayer, preserves template choice and real invitations (1.2s)
+(node:43912) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 3 [firefox] › e2e-static\neocities.spec.ts:39:1 › static subdirectory: no network service calls, local persistence, lesson and template export/import (5.3s)
+  ok 4 [firefox] › e2e-static\neocities.spec.ts:73:1 › Neocities entry opens first-party multiplayer, preserves template choice and real invitations (2.3s)
+
+  4 passed (13.5s)

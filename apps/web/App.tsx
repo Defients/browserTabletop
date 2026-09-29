@@ -6,6 +6,7 @@ import { LocalTable, LocalFirstContact } from './Practice.js';
 import { LearnHome, LessonPlayer } from './Learn.js';
 import { RulesReference } from './Reference.js';
 import { TemplateLibrary } from './Library.js';
+import { STATIC_HOST, onlineHref, roomServer } from './hosting.js';
 
 export const APP_NAME = 'Tabletop';
 
@@ -37,7 +38,7 @@ export default function App() {
   let content;
   switch (page) {
     case undefined: content = <Home online={online} />; break;
-    case 'create': content = <CreateRoom online={online} />; break;
+    case 'create': content = <CreateRoom key={a ?? 'default'} online={online} initialTemplate={a} />; break;
     case 'join': content = <JoinRoom online={online} token={a} />; break;
     case 'recover': content = <RecoverRoom />; break;
     case 'room': content = a ? <RoomLoader id={a} /> : <Home online={online} />; break;
@@ -47,6 +48,13 @@ export default function App() {
     case 'templates': content = <TemplateLibrary editId={a} />; break;
     default: content = <NotFound />;
   }
+  if (STATIC_HOST && ['create', 'join', 'recover', 'room'].includes(page ?? '')) {
+    content = <section className="page narrow"><h1>Online tables</h1>
+      {roomServer() ? <><p>Shared rooms open on our multiplayer site. Your guest seat and saved room stay there.</p><a className="button-like primary" href={onlineHref(route.map(encodeURIComponent).join('/'))}>Continue to online tables</a></>
+        : <p className="notice">Online rooms are not connected yet. You can still play on this device, learn Intrilex, and create templates.</p>}
+      <p><a href="#/practice/first-contact">Play First Contact on this device</a> · <a href="#/templates">Open template library</a></p>
+    </section>;
+  }
   const wide = page === 'room' || page === 'practice' || (page === 'learn' && !!a) || page === 'templates';
   return (
     <div className={`app ${wide ? 'app-wide' : ''}`}>
@@ -54,12 +62,12 @@ export default function App() {
       <header className="topbar">
         <a href="#/" className="brand" aria-label={`${APP_NAME} home`}><span className="brand-mark" aria-hidden="true">◆</span>{APP_NAME}</a>
         <nav aria-label="Main">
-          <a href="#/create" aria-current={page === 'create' ? 'page' : undefined}>Create</a>
-          <a href="#/join" aria-current={page === 'join' ? 'page' : undefined}>Join</a>
+          <a href={onlineHref('create')} aria-current={page === 'create' ? 'page' : undefined}>Create</a>
+          <a href={onlineHref('join')} aria-current={page === 'join' ? 'page' : undefined}>Join</a>
           <a href="#/learn" aria-current={page === 'learn' ? 'page' : undefined}>Learn Intrilex</a>
           <a href="#/rules" aria-current={page === 'rules' ? 'page' : undefined}>Rules</a>
         </nav>
-        <span className={`service-dot ${online === null ? '' : online ? 'is-on' : 'is-off'}`} role="status">{online === null ? 'Checking service…' : online ? 'Online tables available' : 'Offline — local practice only'}</span>
+        <span className={`service-dot ${STATIC_HOST ? '' : online === null ? '' : online ? 'is-on' : 'is-off'}`} role="status">{STATIC_HOST ? 'Play here · shared rooms on our multiplayer site' : online === null ? 'Checking service…' : online ? 'Online tables available' : 'Offline — local practice only'}</span>
       </header>
       <main id="main" tabIndex={-1}>{content}</main>
     </div>

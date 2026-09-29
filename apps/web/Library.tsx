@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { builtInTemplates, exportTemplate, importTemplate, validateTemplate, type TableTemplate } from '../../packages/templates/index.js';
 import { download, loadLocal, navigate, saveLocal } from './common.js';
 import TemplateEditor from './TemplateEditor.js';
+import { STATIC_HOST, onlineHref, roomServer } from './hosting.js';
 
 const KEY = 'tabletop.templates';
 /** Custom templates live only in this browser until exported or used for a room (which pins a copy). */
@@ -35,7 +36,9 @@ export function TemplateLibrary({ editId }: { editId?: string }) {
     <li key={t.id} className="template-card">
       <div><h3>{t.title}</h3><p className="muted small">{t.description}</p><p className="small">{t.seats} seats · {t.cards.length} cards · {t.profile === 'free' ? 'Free table' : t.profile === 'intrilex-core' ? 'Manual Core sandbox' : 'Rules-assisted First Contact'}</p></div>
       <div className="button-row">
-        <a className="button-like" href={`#/create?template=${encodeURIComponent(t.id)}`} onClick={e => { e.preventDefault(); sessionStorage.setItem('tabletop.createTemplate', t.id); navigate('#/create'); }}>Start online table</a>
+        {STATIC_HOST && mine ? <a className="button-like" href={onlineHref(roomServer() ? 'templates' : 'create')}>Import on multiplayer site</a>
+          : <a className="button-like" href={onlineHref(`create/${encodeURIComponent(t.id)}`)}>Start online table</a>}
+        {t.profile === 'intrilex-first-contact' && <a className="button-like" href="#/practice/first-contact">Practise locally</a>}
         {t.profile !== 'intrilex-first-contact' && <a className="button-like" href={`#/practice/table/${encodeURIComponent(t.id)}`}>Practise locally</a>}
         {t.profile !== 'intrilex-first-contact' && <a className="button-like" href={`#/templates/copy-${encodeURIComponent(t.id)}`}>Duplicate & edit</a>}
         {mine && <a className="button-like" href={`#/templates/${encodeURIComponent(t.id)}`}>Edit</a>}
@@ -47,6 +50,7 @@ export function TemplateLibrary({ editId }: { editId?: string }) {
   return (
     <section className="page">
       <div className="page-head"><h1>Template library</h1><p className="muted">Templates are declarative data files (<code>.tabletop.json</code>). They can include custom PNG, JPEG or WebP card faces, but never code, links or live game state.</p></div>
+      {STATIC_HOST && <p className="notice">To use your custom template online, export it here, then import that file on the multiplayer site. Templates and local saves do not automatically transfer between sites.</p>}
       <div className="button-row">
         <a className="button-like primary" href="#/templates/new">New template</a>
         <label className="button-like">Import template file<input type="file" accept="application/json,.json" className="sr-only" onChange={async e => { const f = e.target.files?.[0]; if (!f) return; try { const t = importTemplate(await f.text()); saveCustomTemplate(t); setCustom(customTemplates()); setError(''); } catch (err) { setError((err as Error).message); } e.target.value = ''; }} /></label>

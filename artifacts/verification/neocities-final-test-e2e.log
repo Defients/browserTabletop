@@ -1,0 +1,59 @@
+
+> browser-tabletop@1.0.0 test:e2e
+> npm run build && playwright test
+
+
+> browser-tabletop@1.0.0 build
+> npm run typecheck && vite build && esbuild apps/server/index.ts apps/server/backup.ts apps/server/restore.ts --bundle --platform=node --format=esm --packages=external --outdir=dist/server
+
+
+> browser-tabletop@1.0.0 typecheck
+> tsc --noEmit
+
+vite v8.3.1 building client environment for production...
+transforming...
+✓ 39 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/index.html                   0.60 kB │ gzip:   0.39 kB
+dist/client/assets/index-BzXNueo7.css   30.87 kB │ gzip:   8.05 kB
+dist/client/assets/index-DujXFD8w.js   402.89 kB │ gzip: 123.63 kB
+
+✓ built in 173ms
+
+  dist\server\index.js    132.1kb
+  dist\server\restore.js    1.5kb
+  dist\server\backup.js     1.2kb
+
+Done in 14ms
+
+Running 22 tests using 1 worker
+
+(node:27360) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium] › e2e\learn.spec.ts:12:1 › all lessons complete through real interactions, reject wrong moves, and persist progress (4.5s)
+  ok  2 [chromium] › e2e\learn.spec.ts:85:1 › a complete First Contact practice game against the local opponent, using only offered legal actions (9.4s)
+  ok  3 [chromium] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 1440×900 (3.7s)
+  ok  4 [chromium] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 1024×768 (3.5s)
+  ok  5 [chromium] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 390×844 (3.0s)
+  ok  6 [chromium] › e2e\quality.spec.ts:59:1 › keyboard-only: create a table, open and close dialogs with focus restored, play an action (740ms)
+  ok  7 [chromium] › e2e\quality.spec.ts:94:1 › reduced motion is honoured (369ms)
+  ok  8 [chromium] › e2e\quality.spec.ts:103:1 › performance: 8 seats and 108 cards; remote cursors do not re-render the durable board (3.8s)
+  ok  9 [chromium] › e2e\templates.spec.ts:9:1 › author a template in the editor, export it, re-import it, play it online with two browsers, export without live state (2.8s)
+  ok 10 [chromium] › e2e\templates.spec.ts:93:1 › malformed and oversized imports fail with useful messages and change nothing (720ms)
+  ok 11 [chromium] › e2e\walkthrough.spec.ts:9:1 › host, guest and spectator play First Contact across isolated browsers with restart recovery (8.6s)
+(node:5164) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 12 [firefox] › e2e\learn.spec.ts:12:1 › all lessons complete through real interactions, reject wrong moves, and persist progress (10.9s)
+  ok 13 [firefox] › e2e\learn.spec.ts:85:1 › a complete First Contact practice game against the local opponent, using only offered legal actions (9.7s)
+  ok 14 [firefox] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 1440×900 (5.3s)
+  ok 15 [firefox] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 1024×768 (5.6s)
+  ok 16 [firefox] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 390×844 (5.6s)
+  ok 17 [firefox] › e2e\quality.spec.ts:59:1 › keyboard-only: create a table, open and close dialogs with focus restored, play an action (1.7s)
+  ok 18 [firefox] › e2e\quality.spec.ts:94:1 › reduced motion is honoured (578ms)
+  ok 19 [firefox] › e2e\quality.spec.ts:103:1 › performance: 8 seats and 108 cards; remote cursors do not re-render the durable board (3.6s)
+  ok 20 [firefox] › e2e\templates.spec.ts:9:1 › author a template in the editor, export it, re-import it, play it online with two browsers, export without live state (4.4s)
+  ok 21 [firefox] › e2e\templates.spec.ts:93:1 › malformed and oversized imports fail with useful messages and change nothing (1.9s)
+  ok 22 [firefox] › e2e\walkthrough.spec.ts:9:1 › host, guest and spectator play First Contact across isolated browsers with restart recovery (11.0s)
+
+  22 passed (1.8m)

@@ -19,7 +19,10 @@
     "build": "npm run typecheck && vite build && esbuild apps/server/index.ts apps/server/backup.ts apps/server/restore.ts --bundle --platform=node --format=esm --packages=external --outdir=dist/server",
     "start": "node dist/server/index.js",
     "backup": "node --import tsx apps/server/backup.ts",
-    "restore": "node --import tsx apps/server/restore.ts"
+    "restore": "node --import tsx apps/server/restore.ts",
+    "build:neocities": "npm run typecheck && vite build --mode neocities",
+    "preview:neocities": "vite preview --mode neocities --host 127.0.0.1 --port 4173",
+    "test:neocities": "npm run build && npm run build:neocities && playwright test --config playwright.neocities.config.ts"
   },
   "dependencies": {
     "react": "19.3.0",

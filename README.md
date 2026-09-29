@@ -44,6 +44,8 @@ Configuration: copy [`.env.example`](.env.example). Container: `docker compose u
 
 ## Documentation
 
+For **Neocities**, run `npm run build:neocities` and upload the contents of `dist/neocities/`. Local play, lessons, rules and template editing work there; shared multiplayer opens the separately hosted server configured in `site-config.js`. See [the Neocities guide](docs/NEOCITIES.md) for upload instructions and save boundaries. No public deployment has been performed.
+
 | Topic | File |
 |---|---|
 | Architecture and state ownership | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |

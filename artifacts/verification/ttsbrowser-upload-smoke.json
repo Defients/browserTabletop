@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-29",
+  "target": "https://ttsbrowser.neocities.org",
+  "method": "Local upload files intercepted at target HTTPS origin; CSP copied from public response. No remote upload or live post-deployment test.",
+  "results": [
+    {
+      "browser": "chromium",
+      "passed": true,
+      "checks": [
+        "home",
+        "local draw and reload",
+        "lessons",
+        "templates",
+        "unconfigured multiplayer",
+        "zero missing assets/service requests/page errors"
+      ]
+    },
+    {
+      "browser": "firefox",
+      "passed": true,
+      "checks": [
+        "home",
+        "local draw and reload",
+        "lessons",
+        "templates",
+        "unconfigured multiplayer",
+        "zero missing assets/service requests/page errors"
+      ]
+    }
+  ]
+}

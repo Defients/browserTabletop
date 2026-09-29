@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from './api.js';
 import { loadLocal } from './common.js';
 import { lessons } from '../../packages/intrilex/index.js';
+import { STATIC_HOST, onlineHref, roomServer } from './hosting.js';
 
 interface MyRoom { id: string; title: string; profile: string; savedAt: string; expiresAt: string }
 
@@ -13,17 +14,17 @@ export default function Home({ online }: { online: boolean | null }) {
   return (
     <div className="page home">
       <section className="hero">
-        <p className="eyebrow">Private tables · real cards · no accounts</p>
+        <p className="eyebrow">{STATIC_HOST ? 'Learn here · play solo · meet friends online' : 'Private tables · real cards · no accounts'}</p>
         <h1>Make room for play.</h1>
-        <p className="lead">Open a table, send the invitation, and play together in your browsers. Hands stay private, the table saves itself, and Intrilex is ready to teach.</p>
+        <p className="lead">{STATIC_HOST ? 'Learn Intrilex, play against a simple opponent, or build a table right here. For shared play, open our multiplayer site and invite your friends.' : 'Open a table, send the invitation, and play together in your browsers. Hands stay private, the table saves itself, and Intrilex is ready to teach.'}</p>
       </section>
       <section className="primary-paths" aria-label="Start">
-        <a className="path-card path-create" href="#/create">
+        <a className="path-card path-create" href={onlineHref('create')}>
           <span className="path-icon" aria-hidden="true">＋</span><h2>Create table</h2>
           <p>Choose a template, get an invitation link, and wait for friends to arrive.</p>
-          {online === false && <small className="warn">Table service offline</small>}
+          {STATIC_HOST ? <small>{roomServer() ? 'Opens our multiplayer site' : 'Online rooms not connected yet'}</small> : online === false && <small className="warn">Table service offline</small>}
         </a>
-        <a className="path-card path-join" href="#/join">
+        <a className="path-card path-join" href={onlineHref('join')}>
           <span className="path-icon" aria-hidden="true">↗</span><h2>Join table</h2>
           <p>Open a link from your host or paste it here. Seats and spectating both work.</p>
         </a>
@@ -52,10 +53,10 @@ export default function Home({ online }: { online: boolean | null }) {
         </div>
         <div>
           <h2>Make your own table</h2>
-          <p className="muted">Lay out zones, seats, counters and custom card faces. Export the template file and share it, or start a room with it.</p>
+          <p className="muted">Lay out zones, seats, counters and custom card faces. {STATIC_HOST ? 'Export a template to share it or import it on our multiplayer site. Local saves belong to this browser and site.' : 'Export the template file and share it, or start a room with it.'}</p>
           <div className="button-column">
             <a className="button-like" href="#/templates">Template library & editor</a>
-            <a className="button-like" href="#/recover">Recover a seat with a code</a>
+            <a className="button-like" href={onlineHref('recover')}>Recover a seat with a code</a>
           </div>
         </div>
       </section>

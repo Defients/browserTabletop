@@ -1,0 +1,1 @@
+PASS: npm run dev, Vite client, readiness proxy, API session and CSRF-protected room creation through Vite.

@@ -19,3 +19,7 @@ Independent project. `sources/BROWSER_TABLETOP_MASTER_PROMPT.md` is the complete
 - Dev helpers: `node --import tsx scripts/smoke-games.ts 300 random` (rules fuzz), `scripts/shots.ts` (screenshots).
 
 Record actual gate results in `STATUS.md`; keep `docs/ACCEPTANCE.md` and `docs/capabilities.json` truthful.
+
+## Neocities
+
+`npm run build:neocities` outputs browser files to `dist/neocities`; `npm run preview:neocities` previews them and `npm run test:neocities` checks static hosting plus the real multiplayer handoff. Neocities hosts local experiences; shared rooms navigate to the configured HTTPS server origin (see `docs/NEOCITIES.md`). Preserve first-party server sessions and keep runtime databases out of uploads.

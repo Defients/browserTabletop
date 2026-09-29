@@ -1,0 +1,307 @@
+{
+  "baseCommit": "1ff960552b58d30577349481ba750a0471744816",
+  "verifiedDate": "2026-09-29",
+  "timezone": "America/New_York",
+  "tree": "working checkout plus preserved previous continuation",
+  "gates": [
+    "lint",
+    "typecheck",
+    "test: 116/116",
+    "test:e2e: 22/22",
+    "test:neocities: 4/4"
+  ],
+  "files": [
+    {
+      "path": ".dockerignore",
+      "sha256": "41B66CE41957779F68DC099DA29A404A91A84B79847D14A2C3D0CD1736E7C651"
+    },
+    {
+      "path": ".env.example",
+      "sha256": "F64DC6154603FCE1E6FF5908A8CC3074F88BE59E364248A53F4FC3C8FCFECAB1"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "3E378011C38512E76E96C587AC1E39CDDF99B7C0BA705651FFDB954165C9CC63"
+    },
+    {
+      "path": "apps/server/backup.ts",
+      "sha256": "967F8D4184424DA817D46C4D000CC1497EA164EB9D2D0A15C50BE83F29772CD8"
+    },
+    {
+      "path": "apps/server/dev.env",
+      "sha256": "878D360063D6346821E1311CDB670ECD67951490B2AD50F1282E5CBDE8DEF8F1"
+    },
+    {
+      "path": "apps/server/index.ts",
+      "sha256": "17A2DD27346ED858A76532A71DE1B51A3C8B6C341524F314A174D9D04F4958A8"
+    },
+    {
+      "path": "apps/server/restore.ts",
+      "sha256": "8E4DAF9DDDB06B7B1E205689A701F9BD6E7BE3F54FEDBA036CC6DFABBA2EC965"
+    },
+    {
+      "path": "apps/server/rooms.ts",
+      "sha256": "B93118DF6BC3D09B2752D87B9F99BB08E975DEB359FE2C27A259BB0D9C86D276"
+    },
+    {
+      "path": "apps/server/server.ts",
+      "sha256": "FE57DDBAD0D20F86C891849E33B7580ABDBE97E73B7E438534A98AC3E3737BC9"
+    },
+    {
+      "path": "apps/server/store.ts",
+      "sha256": "FFB71947621D6F9BFF5D3F0F8148F34CD81A5D2B77329CB2E31967CE8499FF53"
+    },
+    {
+      "path": "apps/web/api.ts",
+      "sha256": "A96CB9C87AE93DCB49DDAA82CFAAADDFD5EFE297F8B3BD543CB7349CADAF274C"
+    },
+    {
+      "path": "apps/web/App.tsx",
+      "sha256": "7FA2CB3CA4EDCF52E806D7AC4BF94D3D9204364D99A5D963694A696D800B5034"
+    },
+    {
+      "path": "apps/web/common.tsx",
+      "sha256": "08DD8DDEA81C28717CC2F34153B518951A3BD69CE767A795FF7E539F4A1D3B6A"
+    },
+    {
+      "path": "apps/web/GameBoard.tsx",
+      "sha256": "DB3B717F700CDE7AC8A82365BB7F9B1A6E43BD8841508CCCAA2F20DBB7266483"
+    },
+    {
+      "path": "apps/web/Home.tsx",
+      "sha256": "FD589D044DED8F880F7437FA09224B5D1D9DD3616A2AF2C360132B79CCD7DECC"
+    },
+    {
+      "path": "apps/web/hosting.ts",
+      "sha256": "0E75F3A2E27C021C8DCA8564B2568C3BB7BC9EA9A85E496679B8DC24533F0BCE"
+    },
+    {
+      "path": "apps/web/index.html",
+      "sha256": "E9764CA9C5DFC6D7C16B6C3AC55B93269ECC24ABCC6F15E111D38F5F0ABA1BA7"
+    },
+    {
+      "path": "apps/web/Learn.tsx",
+      "sha256": "641B7B0AA59AA7A5801D5D03D94F8263A0ACEC405EFA7A4B20AA5D8432D1FBC4"
+    },
+    {
+      "path": "apps/web/Library.tsx",
+      "sha256": "7534160193D3818BFAEE1917A70FFF79B15CBD590D2A0CCA6EAA3CEF36CA922D"
+    },
+    {
+      "path": "apps/web/main.tsx",
+      "sha256": "A027E0DFE6FFB9394C03482DA8F77486F87ED67514F429B7FBAF707FD8013270"
+    },
+    {
+      "path": "apps/web/Online.tsx",
+      "sha256": "E2DBA94C227FE6913A8F5A55936CA4144899B04731F3AEEF99A44E17E70DC386"
+    },
+    {
+      "path": "apps/web/Practice.tsx",
+      "sha256": "4D718A96C03288F22A1A2A9AAAE9C9C3B4E7DCFB551F34D996CCA303E37F3A75"
+    },
+    {
+      "path": "apps/web/Presence.tsx",
+      "sha256": "240401FF1D489E978502BF0328D27A0E430C3739C0C05B3A28D6C6E19D0B8336"
+    },
+    {
+      "path": "apps/web/public/site-config.js",
+      "sha256": "FECB76B4FD06CB12AAE95DFE8707B9A244EEFCF52BB5672FF5A9F7549BC0FF66"
+    },
+    {
+      "path": "apps/web/Reference.tsx",
+      "sha256": "DC5BA5B15EA760CE98D4F8456E54C2E29D120084433A05C7A9B475E5D5AE9B81"
+    },
+    {
+      "path": "apps/web/styles.css",
+      "sha256": "7A1BB41C80DB4491D3DC601A6203CA84BB9C2191A3BC3946752E2D502EA368F5"
+    },
+    {
+      "path": "apps/web/TableBoard.tsx",
+      "sha256": "D34236269A27B90B1D5C36CEF8AF60F3F4BE6E3F957505676968627BC0306533"
+    },
+    {
+      "path": "apps/web/TemplateEditor.tsx",
+      "sha256": "82F25CE3441BEA00E8FDC94330F8A204A772405DF624DD0E37F936FDF935C2C1"
+    },
+    {
+      "path": "compose.yaml",
+      "sha256": "7B60891E82BA7993A01F2E77C1E6B4516A7CAD94ED7DADE269A49052ED3EDE67"
+    },
+    {
+      "path": "Dockerfile",
+      "sha256": "C7E4AE120BAE664445ABB362F98D890C8E2C5AFEA261D9661E4C20382BCE7387"
+    },
+    {
+      "path": "docs/capabilities.json",
+      "sha256": "72ADC8E23083E6FABB02DAADB781A35CE0EF2BF97B5FC08CF2F2A7BF1AE10818"
+    },
+    {
+      "path": "e2e-static/neocities.spec.ts",
+      "sha256": "8464E5D649B1C2ED41CF424EA65161F2D5B81F7A8F61F4586A50A977BAC756AD"
+    },
+    {
+      "path": "e2e/fc.ts",
+      "sha256": "69F415F09FF86C36535A6429C243D387CA52212E09172B3B5D3C1989B9C1E368"
+    },
+    {
+      "path": "e2e/learn.spec.ts",
+      "sha256": "93DEA1A010F79526100DFB33F7A80F38893A2389E66B5D374DE02A634B4DCD3D"
+    },
+    {
+      "path": "e2e/quality.spec.ts",
+      "sha256": "ED9A5A10471B47A50EB5C3CF76AB11F4A6D6D317D629A6F5182517FDA320038D"
+    },
+    {
+      "path": "e2e/server.ts",
+      "sha256": "B084139E3F4B7E1E429AA27641BC26C406B7332600C8890719CEFDE11EAF4751"
+    },
+    {
+      "path": "e2e/templates.spec.ts",
+      "sha256": "8BF39CEED1465991AE5A3D97A42A6F511A240E9B360BA01901AE84DFE19A9E0F"
+    },
+    {
+      "path": "e2e/walkthrough.spec.ts",
+      "sha256": "D86BDD39D5D4A38175A552560C1EE5D282C89FD17C8F897AE9548797C2C15BDD"
+    },
+    {
+      "path": "eslint.config.js",
+      "sha256": "C765369A25D300F9D258ADD1237C40D7E5A01261EFA0BECAB75A2BDA22CA9CF4"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "1EF1CC786B2C67CB1F209B7143E7B4863AEBFF138D384626CF10FF6D066963C2"
+    },
+    {
+      "path": "package.json",
+      "sha256": "7A450DFF5AFFFD23071023B45E2805B541DF770023F783127702C00678688B49"
+    },
+    {
+      "path": "packages/intrilex/bot.ts",
+      "sha256": "A0A61475AFEEB6DE882E42C551344898C97426C0879928E5C3952A600EF24CA4"
+    },
+    {
+      "path": "packages/intrilex/engine.ts",
+      "sha256": "6F5117D66AB82FD2D4EDD0166DFB8637667C102DF6DE4AECC5E5F6E423739B84"
+    },
+    {
+      "path": "packages/intrilex/fixtures.ts",
+      "sha256": "3C0E22F8225788E20C40A7E25FA4C1EA6EF91EED5782F13C422E90571FFAC422"
+    },
+    {
+      "path": "packages/intrilex/index.ts",
+      "sha256": "B906ECCAB0E925B055E95EB5A475483E91B2EE3FDCD00822C4044334D7A6D0C6"
+    },
+    {
+      "path": "packages/intrilex/lessons.ts",
+      "sha256": "37CC5030C9A0F6643BDFBFBA27C87DF6E65155CC875D9DBA519B3430C89F4CBD"
+    },
+    {
+      "path": "packages/intrilex/rules.ts",
+      "sha256": "BD9BA96A6F16664520C97AF48E9C99A8C006FAC1BF14A819000BB63896632A49"
+    },
+    {
+      "path": "packages/intrilex/types.ts",
+      "sha256": "50CF4C39060AB33F6E852BA3E667054A96C64116F3CEA8D04BA3477599DE8DFE"
+    },
+    {
+      "path": "packages/protocol/index.ts",
+      "sha256": "69087D6A62A190EE88A306B2C15ED4318325764B809FE9B8C446B2EC9908A40C"
+    },
+    {
+      "path": "packages/tabletop/index.ts",
+      "sha256": "7E1D4E4D097AF82B768A5C143D35F74378DAEA2FDFEC31D206F4CDE07849CE7F"
+    },
+    {
+      "path": "packages/tabletop/types.ts",
+      "sha256": "ECBFDEB6E491DA25969A89D813A2F99BB8D0CD7CB31F0AB774BE1FD7F443AF63"
+    },
+    {
+      "path": "packages/templates/index.ts",
+      "sha256": "D2310496FAB4A14ADBD37B204A70C2B9EE2413869C63B58272C5AADF43963B59"
+    },
+    {
+      "path": "packages/templates/types.ts",
+      "sha256": "1C36ABE922C0521D34F4C91058414A19C0C381A07F4DDB0E495BA2AD2CEBB96D"
+    },
+    {
+      "path": "playwright.config.ts",
+      "sha256": "DADD7F41632233818284BC2A11CC5D05D31506B5B074F759962D2969BE55A62F"
+    },
+    {
+      "path": "playwright.neocities.config.ts",
+      "sha256": "2512F889BDB34A18FB2052581BB4A25D1021DB7843FFA464D2D5A39FDC7764CE"
+    },
+    {
+      "path": "scripts/shots.ts",
+      "sha256": "820DD4AE688329BAC8E83E17A71258AD02F5B7F4AAD9141181EEB764343BB01F"
+    },
+    {
+      "path": "scripts/smoke-games.ts",
+      "sha256": "7EFAC0E5182A0E9AF6D57501C6580EA41E5B83116E3D866107597CACFD894B1F"
+    },
+    {
+      "path": "sources/INTRILEX_v4.3.1_COMPLETE_PLAYER_RULEBOOK.md",
+      "sha256": "1CFBD837F763FC436F4317B9164B802F1EA8FF57E18060FD436D8608E9F0BCF8"
+    },
+    {
+      "path": "tests/backup.test.ts",
+      "sha256": "9412C7F604C4D176EDBADD8A3F87DF6F8A0EE501A67E47C6DB4258CFD4D4025D"
+    },
+    {
+      "path": "tests/bot.test.ts",
+      "sha256": "06723A197D2BDD5772DA85B861BAD0DB69EB4D2542966E8B86F1E52BBC0615D3"
+    },
+    {
+      "path": "tests/fixtures/garden-table.tabletop.json",
+      "sha256": "9A8C09E43D41D65B697A077403F252AB5657A025475BF6035D1786B04C52BB7B"
+    },
+    {
+      "path": "tests/helpers/game.ts",
+      "sha256": "8B0F300196FBE3C0A3AAA7D3FC4D52F7A052E8A226F2610C29BEC1BB37DCC5E1"
+    },
+    {
+      "path": "tests/helpers/server.ts",
+      "sha256": "836800789ACDD51B0DB4F3093AAC0DF1D16770C7AC5ACBEB35ED86DC98597263"
+    },
+    {
+      "path": "tests/hosting.test.ts",
+      "sha256": "786F2BC0887925D4ED781E662478EC662C73B3DE2510D8C400D2D6F43B033480"
+    },
+    {
+      "path": "tests/intrilex.effects.test.ts",
+      "sha256": "B2E1955D72C84DA297DDAD684553A3DBD0EDE48F84C4BDD6896F593A7BE4FED6"
+    },
+    {
+      "path": "tests/intrilex.rules.test.ts",
+      "sha256": "4A251F7A7AE04714A8924FE400DECAB7D85BF9A6440E2DF58A58D269250178C6"
+    },
+    {
+      "path": "tests/lessons.test.ts",
+      "sha256": "589ED39B3A837459520DA54A41EAF667E96B88809BC641BE8A489F5985DB7B32"
+    },
+    {
+      "path": "tests/privacy.test.ts",
+      "sha256": "88D1E02BB920708922C94622887FC6E25E36FE7661602BA24F3BA4724F05A408"
+    },
+    {
+      "path": "tests/server.test.ts",
+      "sha256": "67689CD7552969C68306C500C435F7A26E38CEACB7759BAF976150FC8C8E1FC7"
+    },
+    {
+      "path": "tests/tabletop.test.ts",
+      "sha256": "21F5FC7C7575DC2BD10F91A1FB6CE16D64120C3FF1BA985275B5D2857BAC1BE5"
+    },
+    {
+      "path": "tests/templates.test.ts",
+      "sha256": "EE248B39CEB1CFB9338679E01B67D938BF1C960D690CEF826272014819AB43B2"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "6988196274569A6731849C1A933FF604A4E3DA8D7B94431264B04FCD45EBD158"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "5AEBE097E751D1C7D868A7844762F37B5D23759531051DD6FD2E15D056D9F205"
+    }
+  ]
+}

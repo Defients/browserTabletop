@@ -1,77 +1,57 @@
-# HANDOFF — continue Browser Tabletop from here
+# Latest handoff: Neocities + separate multiplayer
 
-**For:** the next development agent (GPT-6 Astra Medium).
-**From:** previous agent session, 2026-09-29.
-**Read this first, then** `AGENTS.md` → `STATUS.md` → `docs/ACCEPTANCE.md` → `sources/BROWSER_TABLETOP_MASTER_PROMPT.md` (the contract).
-The contract and the rulebook (`sources/INTRILEX_v4.3.1_COMPLETE_PLAYER_RULEBOOK.md`, SHA-256 `1CFBD837…BCF8`) outrank this file.
+Upload target now specified: **https://ttsbrowser.neocities.org/**. Prepared payload: `release/ttsbrowser-neocities-upload.zip`, also unpacked under `release/ttsbrowser-neocities/upload/`; instructions and hashes are in the parent folder. Its existing homepage is “Learn Jakuv - Interactive Tutorial”; root upload replaces it, while `/tabletop/` preserves it. No upload performed. Static rebuild/typecheck and both target-origin browser smoke checks passed; the separate multiplayer URL remains blank. See the newest `STATUS.md` section.
+
+Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+The user explicitly chose a Neocities frontend plus a separate multiplayer server. The implementation keeps local play/lessons/templates on Neocities and opens shared multiplayer on the configured server's own origin. This preserves first-party guest cookies and the existing server privacy/persistence model; it does not issue cross-origin API requests from Neocities.
+
+Read `docs/NEOCITIES.md` and the current section of `STATUS.md`. Build with `npm run build:neocities`; output is `dist/neocities`. Edit its `site-config.js` with the actual server HTTPS origin, then upload the contents to Neocities. `release/browser-tabletop-neocities.zip` contains those four files with an intentionally blank server setting. Do not mistake the example URL in the guide for a deployed server.
+
+Final gates passed: lint, typecheck, 116 Node tests, 22 ordinary browser tests, 4 static/handoff browser tests, both builds. Logs and input hashes are in `artifacts/verification/neocities-*`. Source and upload archives were refreshed. No public deployment, commit or push occurred.
+
+Next work: deploy/configure the separate server only when authorised and a target is known, set its HTTPS origin in the static configuration, then verify a real Neocities upload and shared-room creation/join/reload. Docker and real-device/WebKit checks and rules rulings remain open. Preserve the previous backup-test fix and all current working-tree changes.
 
 ---
 
-## 1. Where things stand (one paragraph)
+# HANDOFF — continue Browser Tabletop from here
 
-The project went from "does not compile" (`dbc525a`) to a working, locally verified release candidate. All five packages/apps are implemented; 115 Node tests and 22 Playwright tests (Chromium + Firefox, real production server) exist and passed. The **last full release-gate run on the exact final tree was interrupted by the user** (see §4) — re-running it is the first job. Nothing is pushed or deployed. Git: `b21921c` on top of `518b4ca`; the user was mid-commit with most of the remaining work **staged** (check `git status` before touching anything; do not rewrite history).
+Updated September 29, 2026 (America/New_York).
 
-## 2. Map of the code
+Read `AGENTS.md` → `STATUS.md` → `docs/ACCEPTANCE.md` → `sources/BROWSER_TABLETOP_MASTER_PROMPT.md`. The contract and canonical rulebook outrank this file.
 
-| Path | What it is | Key entry points |
-|---|---|---|
-| `packages/tabletop` | Generic, rules-free table engine | `createTable`, `applyTable` (immutable, parses `TableCommand`), `projectTable`, `assertInvariants`, `rebaseSafe`, `undoable` |
-| `packages/templates` | Declarative template schema + built-ins | `validateTemplate`, `validateRaster`, `importTemplate`, `exportTemplate`, `builtInTemplates` |
-| `packages/intrilex` | First Contact engine, rules IDs, fixtures, lessons, bot | `engine.ts` (`createGame/availableActions/applyGame/projectGame/explainCard`), `rules.ts`, `fixtures.ts` (`fixture()` from card notation), `lessons.ts`, `bot.ts` (takes a **view**, never state) |
-| `packages/protocol` | Shared wire types | `RoomView`, `RoomCommand`, `ClientMessage/ServerMessage`, `errorText` |
-| `apps/server` | Node HTTP + ws + SQLite | `server.ts` (routes, WS), `rooms.ts` (room commands, views), `store.ts` (migrations v2, transactions), `backup.ts`/`restore.ts` (`VACUUM INTO`), `dev.env` |
-| `apps/web` | React app | `App.tsx` (hash router), `Online.tsx` (create/join/recover/room), `TableBoard.tsx`, `GameBoard.tsx`, `Practice.tsx`, `Learn.tsx`, `TemplateEditor.tsx`, `Library.tsx`, `Presence.tsx`, `api.ts` (`useRoom`), `styles.css` |
-| `tests/` | Node test runner suites | tabletop, templates, intrilex.rules, intrilex.effects, lessons, bot, server, privacy, backup; helpers in `tests/helpers/` |
-| `e2e/` | Playwright | `walkthrough` (3 browsers + restart), `learn` (all lessons + full game), `templates` (editor→export→import→online), `quality` (3 viewports, axe, keyboard, reduced motion, perf) |
-| `docs/` | Contract documentation | ARCHITECTURE, PROTOCOL, TEMPLATES, LESSONS, OPERATIONS, INTRILEX_SOURCE_MAP, capabilities.json, ACCEPTANCE, INTERFACES |
+## Current state
 
-## 3. Non-negotiable invariants (do not regress)
+The clean working tree at session start was `1ff9605`, not the staged tree described by the previous handoff. This continuation leaves a small uncommitted backup-test fix plus refreshed documentation and evidence. Inspect `git status` before editing; preserve these changes. No push or public deployment was performed.
 
-1. Only projections leave the server. Host ≠ omniscient. Canonical card IDs never serialized.
-2. Card handles rotate on entering a hand / non-public pile / DP and on shuffle (both engines). Privacy tests inspect **raw** HTTP/WS payloads — keep them that way.
-3. Persist (single `BEGIN IMMEDIATE`) **before** acknowledging. Request IDs idempotent. **Authorization before freshness** (see `server.ts` commands route). Stale revisions refused unless `staleTolerant`.
-4. Live RNG = CSPRNG. Seeded RNG only in tests/fixtures/lessons.
-5. Templates are data; unknown fields dropped; setup ops are an allow-list.
-6. First Contact legality comes only from `availableActions`; the bot and lessons pick from it.
-7. Never weaken a test or a rule to go green. Rule interpretations go in `docs/INTRILEX_SOURCE_MAP.md` (D-1…D-13) and `docs/capabilities.json`.
+**The previously owed final gate run is complete.** A clean-install isolated copy passed `npm ci` (0 reported vulnerabilities), lint, typecheck, 115/115 Node tests, 22/22 Chromium/Firefox tests, and production build. Production start, bundled online backup/fresh-path restore, recovered session/revision/cards, and dev/Vite proxy room creation also passed. See `STATUS.md` and `artifacts/verification/` for actual evidence and input hashes.
 
-## 4. Verification record (be precise about which tree)
+The initial run exposed a backup-test harness issue: synchronous CLI children blocked the in-process HTTP server and a failure left it running. `tests/backup.test.ts` now awaits asynchronous CLI execution and registers cleanup. All original assertions remain. All gates were rerun after that fix. Runtime application code was unchanged.
 
-| Run | Tree | Result |
-|---|---|---|
-| Isolated copy A | prior tree | ci ✓ (0 vulns), lint ✗→fixed (3 unused-var errors in tests/e2e), typecheck ✓, test 115/115, e2e 22/22, build ✓, `npm start` + `/ready` + room create ✓, backup/restore ✓ on Node 22.14 and 24 (after switching to `VACUUM INTO`) |
-| Isolated copy B | prior tree | ci ✓, lint ✓, typecheck ✓, test 115/115, **e2e 21/22** (Firefox walkthrough: test-harness race clicking a stale disabled *Decline* button), build ✓ |
-| Targeted | after harness fix (`e2e/fc.ts`: enabled-only buttons + wait for *Saved*) | walkthrough + learn `--repeat-each=3`, both engines: **18/18** |
-| Isolated copy C | **final tree** | **interrupted during `npm ci` — NOT COMPLETED** |
+`release/browser-tabletop-src.tar.gz` was regenerated from the delivered source, docs and fresh evidence. Its sibling `.sha256` file and `source-manifest.json` support integrity checking. Private smoke databases and dependencies are excluded. The release directory is intentionally gitignored; regenerate after any later source change.
 
-## 5. Do this next (ranked by ROI)
+## Ranked next steps
 
-1. **Re-run the release gates on the final tree** in an isolated copy (Git Bash):
-   ```bash
-   rm -rf /tmp/bt-final && mkdir -p /tmp/bt-final
-   git ls-files -co --exclude-standard | grep -v '^artifacts/' > /tmp/filelist.txt
-   tar -cf - -T /tmp/filelist.txt | tar -xf - -C /tmp/bt-final && cd /tmp/bt-final
-   npm ci && npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run build
-   ```
-   Then `npm start` (set `PORT`, `DATA_PATH`, `ORIGIN`), check `/ready`, create a room, run `node dist/server/backup.js` / `restore.js`. Replace `RESULTS_PLACEHOLDER` in `STATUS.md` with the real table. If anything fails: root-cause, fix, and rerun **all** gates.
-2. **Regenerate `release/browser-tabletop-src.tar.gz`** from the same file list (+ `artifacts/screens`, `artifacts/perf-*.json`) after step 1 — the existing archive predates the `e2e/fc.ts` and docs edits.
-3. **Container**: Docker was unavailable. On a Docker host: `docker compose up --build`, hit `/ready`, play a room, `docker compose restart`, confirm persistence. Flip rows 42 in `docs/ACCEPTANCE.md` only with evidence. Watch the `node` devDependency (project-local Node 24 binary package) in `npm ci` on Linux.
-4. **Rules rulings from Deffy** (outcome-changing, implemented conservatively): D-1 (whether the §15.7 list is exhaustive) and D-3 (2 Solo Wild disabled). If rulings arrive, change `engine.ts`, add rule-named tests, update source map + capabilities.
-5. **WebKit / real mobile**: add a `webkit` Playwright project if the host supports it; test touch drag on a real device. Currently UNVERIFIED.
-6. Polish candidates (only after 1–3): mobile bottom sheet covers much of the board at 390 px (`.fc-panel` 46 vh); counter-lab counters overlap in the editor preview; consider `eslint-plugin-react-hooks`.
+1. Validate Docker on a capable host: `docker compose up --build`, readiness, play a room, restart and confirm persistence. Docker is absent here; acceptance row 42 stays UNVERIFIED.
+2. Obtain rules-owner rulings for source-map D-1 (enabled-effect list) and D-3 (2 Solo Wild). Do not silently decide either. Update rules, source-named tests and capabilities together if a ruling changes behavior.
+3. Verify WebKit/Safari and real mobile touch behavior. Current browser evidence covers Chromium/Firefox and emulated viewport sizes only.
+4. Polish the mobile First Contact action panel (46vh) and overlapping counter labels in the editor preview. Fresh screenshots reproduce both issues. Keep rule legality and private projections unchanged.
+5. Review the local changes and decide licensing/distribution/publication separately. No public deployment is authorised.
 
-## 6. Environment gotchas (Windows host)
+## Code map
 
-- npm scripts run under **project-local Node 24.21** (`node` devDependency; npm uses cmd.exe). In Git Bash, `node_modules/.bin/*` shims can hit a blank `node` file — use `cmd //c "node_modules\.bin\<tool> ..."` or `node node_modules/<pkg>/bin/...`. System Node is 22.14.
-- Killing a backgrounded `npm start` leaves the child node alive; stop by port in PowerShell: `Get-NetTCPConnection -LocalPort 3000 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }`.
-- Dev (`npm run dev`) needs `apps/server/dev.env` (`ORIGIN=http://127.0.0.1:5173`) because Vite's proxy rewrites Host. The user added `/ready` to the Vite proxy — keep it.
-- Playwright browsers live in `%LOCALAPPDATA%\ms-playwright` (Chromium 153, Firefox 155 installed).
-- Firefox logs "connection to ws://… was interrupted" on reload; `e2e/server.ts` filters exactly that message and nothing broader.
+- `packages/tabletop`: generic immutable commands, permissions, invariants, handle rotation, projections, undo policy.
+- `packages/templates`: validated declarative schema, setup allow-list, raster validation and built-ins.
+- `packages/intrilex`: authoritative First Contact engine, rule IDs, fixtures, lessons, own-view bot.
+- `packages/protocol`: shared room and wire types.
+- `apps/server`: HTTP/WebSocket routing, room authority, SQLite transactions/migrations, backup/restore.
+- `apps/web`: React navigation, online rooms, boards, practice, lessons, template editor, presence and styles.
+- `tests`, `e2e`: rules, privacy, persistence, templates, browser journeys, accessibility and performance.
 
-## 7. Known open decisions (not yours to make)
+## Invariants and environment
 
-Platform licence; distribution rights for Intrilex material (see `NOTICE.md`); pushing/publishing; any public deployment (explicitly **not** authorised).
+Only projections leave the server; host is not omniscient. Rotate hidden handles on hidden-zone entry/shuffle. Persist before acknowledgement; idempotent request IDs; authorization before freshness. Live RNG is CSPRNG. Imported templates are data only. Guided legality comes from `availableActions`. Do not weaken tests or rules.
 
-## 8. Definition of done for your session
+Windows system Node is 22.14; npm scripts use project-local Node 24.21. Run scripts through npm/PowerShell; Git Bash shims may hit a blank `node` file. Background npm can leave child processes: identify only the process owned by your verification server before stopping it. Dev uses `apps/server/dev.env` and Vite's `/ready` proxy; retain both.
 
-All gates green on the final tree with results recorded in `STATUS.md`; archive regenerated; `docs/ACCEPTANCE.md` statuses truthful (only VERIFIED / UNVERIFIED / BLOCKED / OUT_OF_SCOPE); final report distinguishes implemented / locally verified / publicly deployed (the last remains **false**).
+Verification copy: `D:\CodexProjects\browser-tabletop-verification-20260929-091300`. It contains private synthetic smoke databases, so do not archive that directory wholesale. Use the source archive and manifest for portable delivery.

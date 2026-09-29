@@ -56,7 +56,7 @@ Rate limits key on the socket address; behind a proxy every client shares the pr
 
 ## Persistence and recovery semantics
 
-- Every accepted command is committed (room JSON, invite index, membership, request receipt) in one `BEGIN IMMEDIATE` transaction with `synchronous=FULL` **before** the client receives success. A client that saw an error or no response did not change the table; retries with the same `requestId` are idempotent.
+- Every accepted command is committed (room JSON, invite index, membership, request receipt) in one `BEGIN IMMEDIATE` transaction with `synchronous=FULL` **before** the client receives success. If the response is lost, the command may already have committed; reconnect to reconcile the projected state and retry with the same `requestId` for idempotent handling.
 - The UI shows *Saving…*, *Saved*, *Disconnected — reconnecting* and *Not saved*; after reconnect a full projected snapshot restores consistency.
 - A restart restores rooms, seats, hands, revisions, invitation revocations and bans (verified in `tests/server.test.ts` and the Playwright walkthrough).
 - Migrations are numbered in `apps/server/store.ts` and run on start; a database newer than the build is refused.
@@ -90,6 +90,10 @@ Restore verifies integrity and schema compatibility; keep the old files for roll
 
 ## Capacity and costs
 
-Designed for small private groups on one modest machine: up to 2000 rooms, 8 seats + 16 spectators per room, 20 room creations per session per day. Measured locally (Windows, loopback, Chromium): 8 seats with 108 cards rendered in ~0.24 s and median move round-trip ~165 ms (`artifacts/perf-*.json`); this is one machine, not a general performance claim.
+Designed for small private groups on one modest machine: up to 2000 rooms, 8 seats + 16 spectators per room, 20 room creations per session per day. Measured locally (Windows, loopback, Chromium): 8 seats with 108 total cards (60 on the table) reached first render in 81 ms and median move round-trip in 130 ms on September 29, 2026 (`artifacts/perf-*.json`); this is one machine, not a general performance claim.
 
 Running it publicly costs real money or someone's hardware: a small always-on VM or container host, persistent disk for SQLite, a domain and TLS (TLS is free via ACME). Free tiers change frequently and many sleep idle services or lack persistent disks — check any provider's current terms before relying on them. No provider has been evaluated or used for this project.
+
+## Neocities frontend
+
+For Neocities, keep this service's `ORIGIN` set to its own public HTTPS origin and `COOKIE_SECURE=true`. The static site's Create/Join links navigate to this origin, where the multiplayer UI, cookies, API and WebSocket remain same-origin. Do not set server `ORIGIN` to Neocities or add wildcard CORS. See [NEOCITIES.md](NEOCITIES.md).

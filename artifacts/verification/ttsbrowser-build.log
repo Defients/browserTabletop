@@ -1,0 +1,18 @@
+
+> browser-tabletop@1.0.0 build:neocities
+> npm run typecheck && vite build --mode neocities
+
+
+> browser-tabletop@1.0.0 typecheck
+> tsc --noEmit
+
+vite v8.3.1 building client environment for neocities...
+transforming...
+✓ 39 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/neocities/index.html                   0.60 kB │ gzip:   0.39 kB
+dist/neocities/assets/index-BzXNueo7.css   30.87 kB │ gzip:   8.05 kB
+dist/neocities/assets/index-BOo3dwvp.js   403.83 kB │ gzip: 123.87 kB
+
+✓ built in 216ms

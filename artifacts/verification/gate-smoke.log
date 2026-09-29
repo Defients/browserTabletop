@@ -1,0 +1,3 @@
+Private database backup saved and verified (1 rooms): D:\CodexProjects\browser-tabletop-verification-20260929-091300\smoke-private\backup.sqlite
+Restored private database (schema 2) to D:\CodexProjects\browser-tabletop-verification-20260929-091300\smoke-private\restored.sqlite. Start the server with DATA_PATH set to this file.
+PASS: npm start, readiness, static client, session, room creation, durable draw, bundled online backup, fresh-path restore, restored session and room revision/cards.

@@ -1,4 +1,55 @@
-# Latest handoff: Goal +5 report resolved; Seven-family engine fixes
+# Latest handoff: Game Log restyle + "Stylized Text" toggle
+
+Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+The "What happened?" panel in `GameBoard` is now a real component, `apps/web/GameLog.tsx`: chronological feed with bottom-pinning + `↓ N new events` jump control, `Turn N:` lines as compact dividers, kind-coded entries, seat-colored player names (display names, not "Player N"), suit-toned card tokens, and a persisted `tabletop.logStylized` toggle (default ON; OFF renders the original prose verbatim). Semantic classification lives in `apps/web/logModel.ts` — an ordered regex→kind table over `GameView.history` strings (the structured `events` stream covers only a subset of lines, so prose classification is the low-risk path; wire format unchanged). Tests: `tests/gameLog.test.ts` + `e2e/log.spec.ts`. Gates: lint, typecheck, 199/199 Node tests, build, 42/42 e2e (both browsers). Recorded in `STATUS.md`. No commit, push, or deployment.
+
+### Ranked next steps
+
+1. Implement the Reveals gap (`projectGame` `revealedHand`; expire `revealed` at Start with handle rotation).
+2. Continue expanding Full coverage per `docs/INTRILEX_FULL_AUDIT.md` (Voltage, BJ recycle, Sudden Death endgame).
+3. Obtain rules-owner rulings for source-map D-1 and D-3.
+4. Configure/deploy the separate multiplayer server only when authorized; keep the Neocities server origin blank.
+
+---
+
+# Previous handoff: Right-panel suit colors
+
+Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+Suit glyphs in the legal-actions panel's text now match card-face coloring: `suitSpans` in `common.tsx` wraps ♦/♥ in `.suit-red` (`--card-red`) and ♣/♠ in `.suit-black` (lifted slate `#7983ae`, legible on dark glass). Applied in `GameBoard.tsx` to action labels, suggested moves, the filter chip, history and the "Why can / can't I?" list. Text content is unchanged — all accessible names and e2e selectors still match.
+
+Gates: lint, typecheck, `npm run build`, and the full 40-test Playwright suite (Chromium + Firefox) pass; one transient trace-write ENOENT flake on firefox passed on retry. Visual check at `artifacts/shots/suit-colors.png`. Recorded in `STATUS.md`. No commit, push, or deployment.
+
+### Ranked next steps
+
+1. Implement the Reveals gap (project `revealedHand`; expire `revealed` at Start with handle rotation).
+2. Continue expanding Full coverage per `docs/INTRILEX_FULL_AUDIT.md` (Voltage, BJ recycle, Sudden Death endgame).
+3. Obtain rules-owner rulings for source-map D-1 and D-3.
+4. Configure/deploy the separate multiplayer server only when authorized; keep the Neocities server origin blank.
+
+---
+
+# Previous handoff: Room chat dock — auto-open bottom-right + draggable
+
+Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+Room chat now opens by itself on wide viewports, docked bottom-right; collapse persists per room/participant, and narrow viewports keep the collapsed default so the panel doesn't pop as a full-screen modal over the board. The title bar drags the dock via pointer capture clamped to the viewport, with a visible ⠿ grip; the grip button also takes arrow keys (Shift = larger steps) and Enter re-docks to the corner.
+
+Changes: `useRoomSocial.ts` collapsed default follows `(max-width: 860px)` when no stored preference exists; `ChatPanel.tsx` drag/keyboard handling; `styles.css` bottom-right anchoring + affordances. e2e: new `social.spec.ts` test for default-open position, header drag and persisted collapse; `fc.ts` exports `collapseChat`, used where the open dock would cover action controls (walkthrough, social `join`).
+
+Gates: lint, typecheck, 193/193 Node tests, `npm run build`, 36 Playwright runs (Chromium + Firefox) — all pass; one transient chromium flake at room creation passed on retry. Recorded in `STATUS.md`. No commit, push, or deployment.
+
+### Ranked next steps
+
+1. Implement the Reveals gap (project `revealedHand`; expire `revealed` at Start with handle rotation).
+2. Continue expanding Full coverage per `docs/INTRILEX_FULL_AUDIT.md` (Voltage, BJ recycle, Sudden Death endgame).
+3. Obtain rules-owner rulings for source-map D-1 and D-3.
+4. Configure/deploy the separate multiplayer server only when authorized; keep the Neocities server origin blank.
+
+---
+
+# Previous handoff: Goal +5 report resolved; Seven-family engine fixes
 
 Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
 

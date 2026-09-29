@@ -2,6 +2,7 @@ import { test, expect, type Browser, type BrowserContext, type Page } from '@pla
 import AxeBuilder from '@axe-core/playwright';
 import { mkdirSync } from 'node:fs';
 import { Backend, watchErrors } from './server.js';
+import { collapseChat } from './fc.js';
 import type { RoomView } from '../packages/protocol/index.js';
 import { actionInput } from '../packages/intrilex/actionIdentity.js';
 
@@ -17,6 +18,8 @@ async function create(page: Page, backend: Backend, profile: RegExp = /Intrilex 
 }
 async function join(page: Page, invite: string, nickname: string) {
   await page.goto(invite); await page.getByLabel('Your nickname').fill(nickname); await page.getByRole('button', { name: 'Join table' }).click(); await expect(page.locator('.you-are')).toBeVisible();
+  // The dock opens by itself on wide viewports; collapse it so unread badges keep meaning.
+  await collapseChat(page);
 }
 const trigger = (page: Page) => page.getByRole('button', { name: /^Room chat/ });
 async function openChat(page: Page) { if (await trigger(page).getAttribute('aria-expanded') !== 'true') await trigger(page).click(); await expect(page.getByText('Room chat is temporary:', { exact: false })).toBeVisible(); }
@@ -63,6 +66,36 @@ test('real room social journey: unread, identity mention, reply, literal HTML, l
     await backend.restart(); await expect(guest!.getByText(/Earlier chat is unavailable:/)).toBeVisible({ timeout: 20_000 }); await expect(guest!.locator('.chat-entry')).toHaveCount(0);
     expect(errors).toEqual([[], [], []]);
   } finally { for (const context of clients.contexts) await context.close(); await backend.stop(); }
+});
+
+test('room chat opens docked bottom-right by default, drags by its header and remembers collapse', async ({ page }) => {
+  const backend = new Backend(); await backend.start();
+  try {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(backend.url + '/#/create');
+    await page.getByRole('radio', { name: /Intrilex · First Contact/ }).check();
+    await page.getByLabel('Your nickname').fill('Ada'); await page.getByRole('button', { name: 'Create table' }).click();
+    await expect(page.getByRole('heading', { name: 'Invite people' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    const dock = page.locator('.chat-dock');
+    await expect(dock).toBeVisible();
+    await expect(trigger(page)).toHaveAttribute('aria-expanded', 'true');
+    const box = (await dock.boundingBox())!;
+    expect(box.x + box.width).toBeGreaterThan(1440 - 80);
+    expect(box.y + box.height).toBeGreaterThan(900 - 80);
+    const head = page.locator('.chat-head'); const hb = (await head.boundingBox())!;
+    await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(hb.x - 400, hb.y - 200, { steps: 6 });
+    await page.mouse.up();
+    const moved = (await dock.boundingBox())!;
+    expect(moved.x).toBeLessThan(box.x - 200); expect(moved.y).toBeLessThan(box.y - 100);
+    await page.getByRole('button', { name: 'Collapse room chat' }).click();
+    await expect(trigger(page)).toHaveAttribute('aria-expanded', 'false');
+    await page.reload();
+    await expect(dock).toHaveCount(0);
+    await expect(trigger(page)).toHaveAttribute('aria-expanded', 'false');
+  } finally { await backend.stop(); }
 });
 
 test('suggested move uses current exact legal action over HTTP; pending and disconnected execution are disabled', async ({ browser }) => {

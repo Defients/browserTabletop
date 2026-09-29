@@ -1,5 +1,60 @@
 # Status
 
+## Game log ("What happened?") semantic feed — September 29, 2026
+
+The history panel in `GameBoard` is now a `GameLog` component: chronological feed pinned to the newest entry, `Turn N: Player M.` engine lines render as compact turn dividers, and every line is classified into a semantic kind (score, scuttle, denied, counter, major rule moments, steal, exile, draw, reveal, discard, anchor, warn, phase, effect, win, setup, system) by an ordered pattern table in `apps/web/logModel.ts`. `Player N` tokens render as the seat's display name with a seat color (`--log-p0` cyan / `--log-p1` orange, CosmoTech-derived; no authoritative seat colors existed), card names carry suit tone, and counts use tabular figures. Significant kinds get a restrained left accent; wins get ★ + violet wash. A "Stylized Text" checkbox (default ON, persisted as `tabletop.logStylized` via `loadLocal`/`saveLocal`) switches to a neutral presentation that preserves the original prose verbatim. New entries fade in only if they arrive after mount; the scroll region is `role="log"`, keyboard-focusable, and scrolling up unpins with a `↓ N new events` jump control. Empty state shows "Game events will appear here."
+
+Changes: `apps/web/logModel.ts` (classifier + tokenizer, pure), `apps/web/GameLog.tsx`, one-line swap in `GameBoard.tsx`, `.fc-history`/`.glog-*` styles in `styles.css`. Tests: `tests/gameLog.test.ts` (74 real engine lines → kinds, token round-trip, turn/actor parsing, unknown-line fallback) and `e2e/log.spec.ts` (default on, neutral off, prose preserved, reload persistence, seat-name rendering, turn dividers against the practice bot).
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| Node tests | PASS — 199/199 (6 new) |
+| `npm run build` | PASS |
+| Playwright e2e (Chromium + Firefox) | PASS — 42/42, incl. axe at three viewports over the new panel |
+| Visual inspection | `artifacts/shots/glog-{styled,plain,mobile,jump}.png` — seat colors, suit tones, turn dividers, accents, neutral mode, jump control |
+
+No commit, push, or public deployment occurred.
+
+## Right-panel suit colors — September 29, 2026
+
+Suit glyphs inside the legal-actions panel's text labels now use card-face colors: `♦`/`♥` render in `--card-red` (#c0264f) and `♣`/`♠` in a lifted slate (#7983ae) that stays legible as the "black" suit on the dark glass. Card faces themselves were already colored; this covers plain-text labels only.
+
+Changes: `common.tsx` adds `suitSpans(text)`, which wraps suit glyphs in `.suit-red`/`.suit-black` spans; `GameBoard.tsx` applies it to action labels, suggested-move labels, the filter chip, the "What happened?" history and the "Why can / can't I?" list (all inside or spawned from `.fc-panel`). `styles.css` defines the two suit classes. Accessible names and `hasText` matching are unchanged — the spans alter color only.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| `npm run build` | PASS |
+| Playwright e2e (Chromium + Firefox) | PASS — 40/40; one transient firefox trace-write ENOENT flake (documented infrastructure issue) passed on retry |
+| Visual inspection | `artifacts/shots/suit-colors.png` — red ♦/♥ and slate ♣/♠ confirmed in the practice action panel |
+
+No commit, push, or public deployment occurred.
+
+## Room chat dock — auto-open bottom-right, draggable — September 29, 2026
+
+Room chat now opens by itself on wide viewports, docked to the bottom-right corner; an explicit collapse is still remembered per room/participant. Narrow viewports keep the collapsed default, where the open panel would otherwise become a full-screen modal over the board. The dock's title bar is a drag handle (grab cursor, ⠿ grip, "Drag to move" tooltip) using pointer capture with viewport clamping; the grip button also accepts arrow-key moves (Shift = larger steps) and Enter re-docks to the corner.
+
+Changes: `useRoomSocial.ts` defaults `collapsed` from the `(max-width: 860px)` query only when no stored preference exists; `ChatPanel.tsx` adds pointer/keyboard move handling; `styles.css` re-anchors `.chat-dock` bottom-right with drag affordances. e2e: new `social.spec.ts` test covers default-open position, header drag and persisted collapse; `fc.ts` exports `collapseChat`; room-entry helpers collapse the dock where it would cover board controls (walkthrough, social `join`).
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| Node tests | PASS — 193/193 |
+| `npm run build` | PASS |
+| Playwright e2e (Chromium + Firefox) | PASS — 36/36 across social, walkthrough, quality, templates and full specs, incl. the new drag/auto-open test |
+
+Note: one transient flake — the chromium social journey timed out waiting for the 'Invite people' modal during room creation (before any chat interaction); it passed on retry. No commit, push, or public deployment occurred.
+
 ## CosmoTech™ visual system — September 29, 2026
 
 Replaced the felt-green presentation with a complete CosmoTech™ skin: void-first environment, smoked-glass surfaces, violet/cyan signal energy. All styling lives in `apps/web/styles.css` (rewritten as `--ct-*` design tokens with legacy variable aliases); `apps/web/App.tsx` adds the `aria-hidden` `.ct-env` ambient layer (drifting star field, two rotating orbital ring systems, all CSS); `apps/web/index.html` theme-color updated to `#04060d`. Every existing class hook was preserved — no JSX class names, routes, state or logic changed.

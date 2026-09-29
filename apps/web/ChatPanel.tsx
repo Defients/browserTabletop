@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as RKeyboardEvent, type PointerEvent as RPointerEvent } from 'react';
 import { SOCIAL_LIMITS, type ChatEntry, type ChatPart, type RoomView } from '../../packages/protocol/index.js';
 import { RULES } from '../../packages/intrilex/rules.js';
 import { Modal } from './common.js';
@@ -15,9 +15,41 @@ export default function ChatPanel({ view, social, sendChat, retryChat, connected
   const [visible, setVisible] = useState(() => document.visibilityState === 'visible');
   const list = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const dock = useRef<HTMLElement>(null);
+  const grab = useRef({ dx: 0, dy: 0 });
   const composition = useRef(false);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
   const newest = state.entries.at(-1)?.id;
   const open = !state.collapsed;
+  const clampDock = (x: number, y: number) => {
+    const w = dock.current?.offsetWidth ?? 380, h = dock.current?.offsetHeight ?? 320;
+    return { x: Math.min(Math.max(0, x), Math.max(0, window.innerWidth - w)), y: Math.min(Math.max(0, y), Math.max(0, window.innerHeight - h)) };
+  };
+  useEffect(() => {
+    const clamp = () => setPos(p => (p ? clampDock(p.x, p.y) : p));
+    window.addEventListener('resize', clamp); return () => window.removeEventListener('resize', clamp);
+  }, []);
+  const dragStart = (e: RPointerEvent<HTMLElement>) => {
+    const t = e.target as HTMLElement;
+    if (e.button !== 0 || (t.closest('button') && !t.closest('.chat-grip'))) return;
+    const rect = dock.current?.getBoundingClientRect(); if (!rect) return;
+    grab.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
+    setPos({ x: rect.left, y: rect.top }); setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const dragMove = (e: RPointerEvent<HTMLElement>) => { if (dragging) setPos(clampDock(e.clientX - grab.current.dx, e.clientY - grab.current.dy)); };
+  const dragStop = () => setDragging(false);
+  const gripKeys = (e: RKeyboardEvent<HTMLElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPos(null); return; }
+    const step = e.shiftKey ? 64 : 16;
+    const deltas: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+    const d = deltas[e.key];
+    if (!d || !dock.current) return;
+    e.preventDefault();
+    const rect = dock.current.getBoundingClientRect();
+    setPos(clampDock((pos?.x ?? rect.left) + d[0], (pos?.y ?? rect.top) + d[1]));
+  };
   useEffect(() => {
     const query = matchMedia('(max-width: 860px)'); const update = () => setMobile(query.matches);
     query.addEventListener('change', update); return () => query.removeEventListener('change', update);
@@ -69,7 +101,11 @@ export default function ChatPanel({ view, social, sendChat, retryChat, connected
     <button type="button" ref={trigger} className="chat-toggle" aria-expanded={open} aria-controls="room-chat" onClick={() => social.setCollapsed(!state.collapsed)}>Room chat{state.unread ? ` (${state.unread} unread)` : ''}</button>
     {open && (mobile ? <Modal title={selectedRule?.title ?? 'Room chat'} onClose={() => { if (selectedRule) setRule(null); else social.setCollapsed(true); }}>
       <div id="room-chat">{selectedRule ? <>{ruleContent}<p><button type="button" autoFocus onClick={() => setRule(null)}>Back to room chat</button></p></> : content}</div>
-    </Modal> : <aside className="chat-dock" id="room-chat" aria-label="Room chat"><header className="chat-head"><h2>Room chat</h2><button type="button" className="icon-btn" aria-label="Collapse room chat" onClick={collapse}>×</button></header>{content}</aside>)}
+    </Modal> : <aside ref={dock} className={dragging ? 'chat-dock chat-dragging' : 'chat-dock'} id="room-chat" aria-label="Room chat" style={pos ? { left: pos.x, top: pos.y, right: 'auto', bottom: 'auto' } : undefined}>
+      <header className="chat-head" title="Drag to move" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragStop} onPointerCancel={dragStop} onLostPointerCapture={dragStop}>
+        <span className="chat-head-title"><button type="button" className="chat-grip" aria-label="Move room chat. Drag the title bar, or use the arrow keys. Enter docks it in the corner." aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Enter" onKeyDown={gripKeys}>⠿</button><h2>Room chat</h2></span>
+        <button type="button" className="icon-btn" aria-label="Collapse room chat" onClick={collapse}>×</button>
+      </header>{content}</aside>)}
     {selectedRule && !(mobile && open) && <Modal title={selectedRule.title} onClose={() => setRule(null)}>{ruleContent}</Modal>}
   </>;
 }

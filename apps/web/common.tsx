@@ -30,6 +30,11 @@ export function cardName(c: { rank?: string; suit?: string }): string {
   return sym ? `${c.rank}${sym}` : `${c.rank}${c.suit ? ` of ${c.suit}` : ''}`;
 }
 
+const SUIT_GLYPH = /([♣♦♥♠])/g;
+export function suitSpans(text: string) {
+  return text.split(SUIT_GLYPH).map((part, i) => (i % 2 ? <span key={i} className={part === '♥' || part === '♦' ? 'suit-red' : 'suit-black'}>{part}</span> : part));
+}
+
 export interface FaceProps {
   rank?: string; suit?: string; image?: string; tapped?: boolean; locked?: boolean; attached?: boolean; revealed?: boolean;
   selected?: boolean; size?: 'sm' | 'md' | 'lg'; extraLabel?: string;

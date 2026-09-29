@@ -16,6 +16,12 @@ export async function click(page: Page, name: RegExp) {
 }
 export async function hasAction(page: Page, name: RegExp) { await waitSaved(page); return (await actions(page).filter({ hasText: name }).count()) > 0; }
 
+/** Collapse the room chat dock when it auto-opened, so board clicks are not covered; no-op on narrow viewports where it stays a closed modal. */
+export async function collapseChat(page: Page) {
+  const c = page.getByRole('button', { name: 'Collapse room chat' });
+  if (await c.count()) await c.click();
+}
+
 /** Whoever must respond declines, until nobody is being asked to respond. */
 export async function settle(pages: Page[]) {
   for (let i = 0; i < 20; i++) {

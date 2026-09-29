@@ -1,6 +1,6 @@
 import { test, expect, type Page, type BrowserContext } from '@playwright/test';
 import { Backend, watchErrors } from './server.js';
-import { click, hasAction, settle, waitSaved } from './fc.js';
+import { click, collapseChat, hasAction, settle, waitSaved } from './fc.js';
 
 /**
  * Mandatory walkthrough (master prompt §14): genuine backend, three isolated browser contexts,
@@ -27,16 +27,19 @@ test('host, guest and spectator play First Contact across isolated browsers with
     expect(spectatorInvite).not.toBe(invite);
     await host.keyboard.press('Escape');
     await expect(host.getByRole('heading', { name: 'Invite people' })).toBeHidden();
+    await collapseChat(host);
 
     // 2. Guest joins in a separate context; spectator joins in a third.
     await guest.goto(invite);
     await guest.getByLabel('Your nickname').fill('Bo');
     await guest.getByRole('button', { name: 'Join table' }).click();
     await expect(guest.locator('.you-are')).toHaveText(/Player 2/);
+    await collapseChat(guest);
     await spec.goto(spectatorInvite);
     await spec.getByLabel('Your nickname').fill('Cy');
     await spec.getByRole('button', { name: 'Join table' }).click();
     await expect(spec.locator('.you-are')).toHaveText(/Spectating/);
+    await collapseChat(spec);
 
     // 3. Roles and visibility differ: only players have hands; only the host can invite.
     await expect(host.locator('.you-are')).toHaveText(/Player 1 · host/);

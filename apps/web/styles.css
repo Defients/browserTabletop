@@ -285,6 +285,8 @@ main, main h1:focus { outline: none; }
 span.card { cursor: default; }
 .card:hover { transform: translateY(-2px); background: linear-gradient(165deg, #f8faff, #e6eaf8); }
 .card-red { color: var(--card-red); }
+.suit-red { color: var(--card-red); }
+.suit-black { color: #7983ae; }
 .card-sm { --card-w: 52px; --card-h: 72px; font-size: .78rem; padding: 3px 4px; }
 .card-lg { --card-w: 180px; --card-h: 250px; font-size: 1.7rem; padding: 10px 12px; }
 .card-corner { display: flex; flex-direction: column; align-items: center; width: max-content; line-height: 1; font-size: 1em; }
@@ -431,8 +433,61 @@ span.card { cursor: default; }
 .action-draw { border-left: 3px solid var(--ct-cyan); }
 .action-end { border-left: 3px solid var(--ct-silver); font-weight: 700; }
 .action-decline { border-left: 3px solid #5a6488; }
-.fc-history summary { cursor: pointer; font-weight: 700; }
-.fc-history ol { padding-left: 1.1rem; margin: .4rem 0 0; font-size: .82rem; color: var(--ct-text-secondary); }
+/* ── Game log: "What happened?" — semantic event feed ── */
+.fc-history { border-top: 1px solid var(--ct-border); padding-top: .55rem; }
+.fc-history > summary { cursor: pointer; font-weight: 700; }
+.glog { --log-p0: var(--ct-cyan); --log-p1: var(--ct-orange); --log-card-red: #ff93a8; --log-card-black: #dfe6ff; --log-joker-black: #c9b8ff; }
+.glog-count { font-size: .68rem; font-weight: 700; color: var(--ct-text-muted); background: rgba(140, 160, 255, .12); border: 1px solid rgba(140, 160, 255, .2); border-radius: 999px; padding: .05rem .45rem; margin-left: .45rem; }
+.glog-toolbar { display: flex; align-items: center; gap: .5rem; margin: .4rem 0 .35rem; }
+.glog-toggle { flex-direction: row; align-items: center; gap: .4rem; font-size: .78rem; font-weight: 600; color: var(--ct-text-secondary); cursor: pointer; width: auto; }
+.glog-toggle input { margin: 0; }
+.glog-wrap { position: relative; }
+.glog-scroll { max-height: min(15rem, 38vh); overflow-y: auto; overscroll-behavior: contain; padding-right: .15rem; }
+.glog-list { list-style: none; margin: 0; padding: 0; }
+.glog-item { font-size: .8rem; line-height: 1.5; padding: .2rem .1rem .2rem .5rem; border-left: 2px solid transparent; color: var(--ct-text-secondary); overflow-wrap: anywhere; }
+.glog-item + .glog-item { border-top: 1px solid rgba(120, 132, 184, .09); }
+.glog-empty { margin: 0; padding: .7rem 0; text-align: center; font-size: .82rem; font-style: italic; color: var(--ct-text-muted); }
+/* Inline tokens: players carry seat identity; cards carry suit tone; numbers stay tabular. */
+.glog-p { font-weight: 700; }
+.glog-p::before { content: ""; display: inline-block; width: .42em; height: .42em; margin-right: .32em; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+.glog-p0 { color: var(--log-p0); }
+.glog-p1 { color: var(--log-p1); }
+.glog-card { font-weight: 700; }
+.glog-card-red, .glog-card-joker-red { color: var(--log-card-red); }
+.glog-card-black { color: var(--log-card-black); }
+.glog-card-joker-black { color: var(--log-joker-black); }
+.glog-num { font-weight: 700; color: var(--ct-text-primary); font-variant-numeric: tabular-nums; }
+/* Event semantics: left accents mark only noteworthy moments. */
+.glog-k-setup, .glog-k-system, .glog-k-phase, .glog-k-discard { color: var(--ct-text-muted); }
+.glog-k-warn { color: #ffd9a0; }
+.glog-k-reveal { color: var(--ct-text-primary); }
+.glog-k-draw .glog-num { color: var(--ct-cyan); }
+.glog-k-score { border-left-color: var(--ct-teal); background: rgba(79, 216, 189, .05); }
+.glog-k-score .glog-num { color: var(--ct-teal); }
+.glog-k-scuttle { border-left-color: var(--ct-danger); }
+.glog-k-denied { border-left-color: var(--ct-orange); color: var(--ct-text-muted); }
+.glog-k-counter { border-left-color: rgba(255, 180, 94, .55); }
+.glog-k-steal { border-left-color: var(--ct-magenta); }
+.glog-k-exile { border-left-color: rgba(143, 123, 255, .45); }
+.glog-k-major { border-left-color: var(--ct-violet); background: rgba(143, 123, 255, .07); color: var(--ct-text-primary); }
+.glog-k-win { border-left-color: var(--ct-violet); background: linear-gradient(90deg, rgba(143, 123, 255, .16), transparent 75%); color: var(--ct-text-primary); font-weight: 650; }
+.glog-k-win::before { content: "★"; color: var(--ct-warning); margin-right: .3rem; }
+/* Turn boundaries divide the feed without consuming a full header row. */
+.glog-k-turn { border-left: none; padding: .45rem 0 .15rem; }
+.glog-turn { display: flex; align-items: center; gap: .5rem; font-size: .68rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--ct-text-muted); }
+.glog-turn::before { content: ""; width: .9rem; height: 1px; background: var(--ct-border-active); }
+.glog-turn::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--ct-border-active), transparent); }
+.glog-turn .glog-p { letter-spacing: .06em; }
+.glog-turn .glog-p::before { display: none; }
+/* Newest-entry entrance: brief and only for entries that arrive after mount. */
+@keyframes glog-in { from { opacity: 0; transform: translateY(3px); } }
+.glog-item.is-new { animation: glog-in var(--ct-dur) var(--ct-ease) both; }
+.glog-jump { position: absolute; left: 50%; bottom: .45rem; transform: translateX(-50%); z-index: 2; font-size: .72rem; min-height: 0; padding: .2rem .7rem; border-radius: 999px; background: rgba(13, 18, 40, .94); border-color: var(--ct-violet); box-shadow: 0 4px 14px rgba(0, 0, 0, .5), 0 0 12px rgba(143, 123, 255, .18); }
+/* Stylized Text OFF: identical structure, neutral presentation. */
+.glog.is-plain .glog-item { border-left-color: transparent; background: none; color: var(--ct-text-secondary); font-weight: 400; }
+.glog.is-plain .glog-item.is-new { animation: none; }
+.glog.is-plain .glog-k-win::before { content: none; }
+.glog.is-plain .glog-turn { color: var(--ct-text-muted); }
 .rank-notes li, .why-list li { padding: .4rem 0; border-bottom: 1px solid var(--ct-border); font-size: .92rem; }
 .narrow-only { display: none !important; }
 .zone-pick { font-size: .75rem; min-height: 1.6rem; padding: 0 .5rem; background: rgba(143, 123, 255, .14); border-color: var(--ct-violet); }
@@ -528,9 +583,16 @@ span.card { cursor: default; }
 
 /* ── Social UI lives outside board state and keeps the action sheet available ── */
 .chat-toggle { white-space: nowrap; }
-.chat-dock { position: fixed; left: 1rem; top: 5rem; width: min(380px, calc(100vw - 2rem)); max-height: calc(100dvh - 6rem); z-index: 45; background: rgba(13, 18, 40, .95); backdrop-filter: blur(12px); border: 1px solid var(--ct-border-active); border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, .6), 0 0 40px rgba(90, 63, 214, .1); display: flex; flex-direction: column; overflow: hidden; }
-.chat-head { display: flex; align-items: center; justify-content: space-between; padding: .65rem .85rem; border-bottom: 1px solid var(--ct-border); }
+.chat-dock { position: fixed; right: 1rem; bottom: 1rem; width: min(380px, calc(100vw - 2rem)); max-height: calc(100dvh - 6rem); z-index: 45; background: rgba(13, 18, 40, .95); backdrop-filter: blur(12px); border: 1px solid var(--ct-border-active); border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, .6), 0 0 40px rgba(90, 63, 214, .1); display: flex; flex-direction: column; overflow: hidden; }
+.chat-dock.chat-dragging { box-shadow: 0 26px 64px rgba(0, 0, 0, .72), 0 0 44px rgba(99, 226, 255, .14); border-color: var(--ct-cyan); }
+.chat-head { display: flex; align-items: center; justify-content: space-between; padding: .65rem .85rem; border-bottom: 1px solid var(--ct-border); cursor: grab; touch-action: none; user-select: none; }
+.chat-head:active, .chat-dragging .chat-head, .chat-dragging .chat-grip { cursor: grabbing; }
+.chat-head-title { display: flex; align-items: center; gap: .45rem; min-width: 0; }
 .chat-head h2 { margin: 0; font-size: 1.1rem; }
+.chat-grip { background: none; border: 1px solid transparent; border-radius: 6px; padding: .05rem .3rem; min-height: 0; font-size: 1.05rem; line-height: 1; color: var(--ct-text-muted); cursor: grab; }
+.chat-grip:hover:not(:disabled) { background: rgba(99, 226, 255, .08); border-color: rgba(99, 226, 255, .3); color: var(--ct-text-primary); box-shadow: none; }
+.chat-grip:active:not(:disabled) { transform: none; }
+.chat-grip:focus-visible { outline: 2px solid var(--ct-cyan); outline-offset: 1px; }
 .chat-content { display: flex; flex-direction: column; gap: .6rem; padding: .75rem; min-height: 0; overflow: auto; }
 .chat-retention { margin: 0; font-size: .78rem; color: var(--ct-text-muted); }
 .chat-messages { flex: 1; min-height: 100px; max-height: 35dvh; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; }

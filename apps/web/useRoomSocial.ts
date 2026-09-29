@@ -16,7 +16,10 @@ export function createRoomSocial(roomId: string, participantId: string) {
   const settings = stored && typeof stored === 'object' ? stored as Record<string, unknown> : {};
   let readOrder = typeof settings.readOrder === 'number' && Number.isSafeInteger(settings.readOrder) ? settings.readOrder : 0;
   let readEpoch = typeof settings.epoch === 'string' ? settings.epoch : null;
-  let state: SocialSnapshot = { epoch: null, entries: [], pending: [], notices: [], draft: '', chips: [], muted: Array.isArray(settings.muted) ? settings.muted.filter((id): id is string => typeof id === 'string').slice(0, 100) : [], collapsed: settings.collapsed !== false, unread: 0, epochChanged: false };
+  // Unset preference defaults to open on wide viewports (the dock sits bottom-right) and
+  // collapsed on narrow ones, where an open panel would become a full-screen modal.
+  const collapsedDefault = typeof matchMedia === 'function' ? matchMedia('(max-width: 860px)').matches : true;
+  let state: SocialSnapshot = { epoch: null, entries: [], pending: [], notices: [], draft: '', chips: [], muted: Array.isArray(settings.muted) ? settings.muted.filter((id): id is string => typeof id === 'string').slice(0, 100) : [], collapsed: typeof settings.collapsed === 'boolean' ? settings.collapsed : collapsedDefault, unread: 0, epochChanged: false };
   const listeners = new Set<() => void>();
   const seenNotices = new Set<string>();
   const timers = new Map<string, ReturnType<typeof setTimeout>>();

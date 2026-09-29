@@ -4,8 +4,9 @@ import { RULES, anchorValue, explainAction, explainCard } from '../../packages/i
 import type { PointerClientMessage, ParticipantView } from '../../packages/protocol/index.js';
 import { actionKey } from '../../packages/intrilex/actionIdentity.js';
 import { rankSuggestedMoves } from '../../packages/intrilex/suggestions.js';
-import { CardFace, Modal, cardName } from './common.js';
+import { CardFace, Modal, cardName, suitSpans } from './common.js';
 import { PresenceLayer } from './Presence.js';
+import GameLog from './GameLog.js';
 
 export type BoardZone = 'hand' | 'dp' | 'pr' | 'er' | 'gy';
 export interface GameBoardProps {
@@ -183,11 +184,11 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
           <h3>Suggested Moves</h3>
           <p className="muted small">{view.legalActions.length <= 2 ? 'These are the available legal choices for this decision.' : 'Advice from your visible cards and public board. Every legal choice remains below.'}</p>
           <ol>{suggested.map(move => <li key={move.key}>
-            <button type="button" className="action-btn suggested-action" disabled={busy} onClick={() => execute(move.key)} aria-label={`Suggested move ${move.rank}: ${move.label}`}><span>{move.rank}. {move.label}</span><small>{move.explanation}</small></button>
+            <button type="button" className="action-btn suggested-action" disabled={busy} onClick={() => execute(move.key)} aria-label={`Suggested move ${move.rank}: ${move.label}`}><span>{move.rank}. {suitSpans(move.label)}</span><small>{move.explanation}</small></button>
           </li>)}</ol>
         </section>}
         {myDecision && <h3 className="fc-possible-heading">Possible Moves</h3>}
-        {selected && <div className="chip-row"><button type="button" className="chip" onClick={() => setSelected(null)}>Filtering by {cardName(visibleCards.find(c => c.id === selected) ?? {})} ×</button>
+        {selected && <div className="chip-row"><button type="button" className="chip" onClick={() => setSelected(null)}>Filtering by {suitSpans(cardName(visibleCards.find(c => c.id === selected) ?? {}))} ×</button>
           {handIds.has(selected) && <button type="button" className="chip" onClick={showWhy}>Why can / can’t I?</button>}
           <button type="button" className="chip" onClick={() => { const c = visibleCards.find(x => x.id === selected); if (c) { setInspect(c); onInspectCard?.(); } }}>Inspect</button></div>}
         {hints && !selected && myDecision && <p className="muted small">Select a card to focus its choices. Legal choices only are listed; the engine checks them again.</p>}
@@ -196,15 +197,12 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
         <div className="fc-actions">
           {actions.map((a, i) => (
             <button type="button" title={explainAction(a)} key={`${actionKey(a)}|${i}`} className={`action-btn action-${a.type}`} disabled={busy} onClick={() => execute(actionKey(a))}>
-              <span>{a.label}</span>{hints && RULES[a.ruleRef] && <small>{RULES[a.ruleRef]!.ref}</small>}
+              <span>{suitSpans(a.label)}</span>{hints && RULES[a.ruleRef] && <small>{RULES[a.ruleRef]!.ref}</small>}
             </button>
           ))}
           {!actions.length && <p className="empty-note">{view.winner !== null ? 'This game is complete.' : view.you === null ? 'Spectators follow every public play. Hands stay private.' : actionSearch ? 'No legal action matches this search. Clear the search to see other choices.' : selected ? 'No legal action with this card right now.' : `Waiting for ${label(view.choice?.player ?? view.priority)}.`}</p>}
         </div>
-        <details className="fc-history" open={hints}>
-          <summary>What happened?</summary>
-          <ol reversed>{view.history.slice(-14).reverse().map((h, i) => <li key={i}>{h}</li>)}</ol>
-        </details>
+        <GameLog history={view.history} open={hints} nameOf={label} />
       </aside>
 
       {inspect && <Modal title={cardName(inspect)} onClose={() => setInspect(null)}>
@@ -213,7 +211,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
       </Modal>}
       {gy && <Modal title={`Graveyard · ${view.graveyard.length} cards (newest last)`} onClose={() => setGy(false)} wide><div className="browse-grid">{view.graveyard.map(c => <CardFace key={c.id} size="sm" rank={c.rank} suit={c.suit} />)}</div></Modal>}
       {exileOpen && <Modal title={`Exile · ${view.exile?.length ?? 0} cards (newest last)`} onClose={() => setExileOpen(false)} wide><div className="browse-grid">{view.exile?.map(c => <CardFace key={c.id} size="sm" rank={c.rank} suit={c.suit} />)}</div></Modal>}
-      {why && <Modal title="Why can / can’t I?" onClose={() => setWhy(null)}><ul className="why-list">{why.map((w, i) => <li key={i}>{w}</li>)}</ul></Modal>}
+      {why && <Modal title="Why can / can’t I?" onClose={() => setWhy(null)}><ul className="why-list">{why.map((w, i) => <li key={i}>{suitSpans(w)}</li>)}</ul></Modal>}
     </div>
   );
 }

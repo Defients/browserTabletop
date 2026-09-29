@@ -1,0 +1,21 @@
+
+Running 12 tests using 1 worker
+
+(node:29924) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium] › e2e\social.spec.ts:30:1 › real room social journey: unread, identity mention, reply, literal HTML, local mute, rules, read-only and reconnect (4.5s)
+  ok  2 [chromium] › e2e\social.spec.ts:68:1 › suggested move uses current exact legal action over HTTP; pending and disconnected execution are disabled (1.8s)
+  ok  3 [chromium] › e2e\social.spec.ts:91:1 › scroll position, unread watermark and same-epoch reconnect survive live chat; rejected draft retries explicitly (14.0s)
+  ok  4 [chromium] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 1440×900 (2.4s)
+  ok  5 [chromium] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 1024×768 (2.0s)
+  ok  6 [chromium] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 390×844 (1.7s)
+(node:42776) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  7 [firefox] › e2e\social.spec.ts:30:1 › real room social journey: unread, identity mention, reply, literal HTML, local mute, rules, read-only and reconnect (10.6s)
+  ok  8 [firefox] › e2e\social.spec.ts:68:1 › suggested move uses current exact legal action over HTTP; pending and disconnected execution are disabled (2.5s)
+  ok  9 [firefox] › e2e\social.spec.ts:91:1 › scroll position, unread watermark and same-epoch reconnect survive live chat; rejected draft retries explicitly (15.4s)
+  ok 10 [firefox] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 1440×900 (2.6s)
+  ok 11 [firefox] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 1024×768 (2.4s)
+  ok 12 [firefox] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 390×844 (3.3s)
+
+  12 passed (1.1m)

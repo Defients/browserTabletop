@@ -79,7 +79,7 @@ export function LessonPlayer({ id }: { id: string }) {
         {showHint && <p className="hint">{lessonHint(state)}</p>}
         {state.completed && <div className="button-row">{next ? <a className="button-like primary" href={`#/learn/${next.id}`}>Next lesson: {next.title}</a> : <a className="button-like primary" href="#/practice/first-contact">Play a full First Contact game</a>}</div>}
       </div>
-      <GameBoard view={view} onAction={onAction} names={['You', 'Opponent']} hints={hints} onToggleHints={() => setHints(!hints)} onZone={onZone} onInspectCard={onInspect} />
+      <GameBoard view={view} onAction={onAction} names={['You', 'Opponent']} hints={hints} onToggleHints={() => setHints(!hints)} onZone={onZone} onInspectCard={onInspect} suggestions={false} />
     </div>
   );
 }

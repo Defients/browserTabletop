@@ -1,0 +1,11 @@
+
+> browser-tabletop@1.0.0 lint
+> eslint .
+
+
+D:\CodexProjects\browser-tabletop\tests\social-server.test.ts
+  85:3  error  The value assigned to 'v' is not used in subsequent statements                no-useless-assignment
+  85:3  error  'v' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 2 problems (2 errors, 0 warnings)
+

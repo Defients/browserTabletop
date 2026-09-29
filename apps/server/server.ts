@@ -4,7 +4,8 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, resolve, sep } from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { builtInTemplates, validateTemplate, type TableTemplate } from '../../packages/templates/index.js';
-import { HOST_COMMANDS, parseClientMessage, type CreateRoomResponse, type ServerMessage } from '../../packages/protocol/index.js';
+import { HOST_COMMANDS, SOCIAL_LIMITS, parseClientMessage, validRequestId, type CreateRoomResponse, type ServerMessage, type RoomNotification } from '../../packages/protocol/index.js';
+import { createSocial, decisionTransition, notice, SocialError } from './social.js';
 import { openStore, StoreError, type Store } from './store.js';
 import {
   ApiError, DAY, MEMBERSHIP_LIMIT, ROOM_TTL, SPECTATOR_LIMIT, applyCommand, freshState, nickname, parseRoomCommand,
@@ -22,17 +23,20 @@ export interface ServerOptions {
   failPersist?: () => boolean; now?: () => number; log?: (entry: Record<string, unknown>) => void;
 }
 
-interface SocketInfo { room: string; participant: string; session: string; last: number; checked: number }
+interface SocketInfo { room: string; participant: string; session: string; tokenHash: string; last: number }
 
 export function createServer(options: ServerOptions) {
   const now = options.now ?? Date.now;
   const log = options.log ?? ((e: Record<string, unknown>) => console.log(JSON.stringify({ t: new Date(now()).toISOString(), ...e })));
   const store: Store = openStore(options.dbPath, options.failPersist);
   const sockets = new Map<WebSocket, SocketInfo>();
+  const social = createSocial(now);
+  const announcedEpochs = new Map<string, string>();
+  const disconnects = new Map<string, ReturnType<typeof setTimeout>>();
   const rates = new Map<string, { start: number; count: number }>();
   let ready = true;
 
-  const connectedIn = (roomId: string) => new Set([...sockets.values()].filter(s => s.room === roomId).map(s => s.participant));
+  const connectedIn = (roomId: string) => new Set([...sockets].filter(([ws, s]) => s.room === roomId && ws.readyState === WebSocket.OPEN).map(([, s]) => s.participant));
   const loadRoom = (id: string): Room => {
     const room = store.getRoom(id);
     requireThat(room, 404, 'ROOM_NOT_FOUND');
@@ -46,15 +50,56 @@ export function createServer(options: ServerOptions) {
     return p;
   };
   const view = (room: Room, p: Participant) => roomView(room, p, connectedIn(room.id));
-  const send = (ws: WebSocket, m: ServerMessage) => ws.send(JSON.stringify(m));
+  const send = (ws: WebSocket, m: ServerMessage) => {
+    if (ws.readyState !== WebSocket.OPEN) return;
+    if (ws.bufferedAmount > 2_000_000) { ws.close(4008, 'Reconnect required'); return; }
+    ws.send(JSON.stringify(m));
+  };
+  /** Check current stored session and association before every delivery or submission. */
+  const socketMember = (ws: WebSocket, info: SocketInfo, room: Room): Participant | undefined => {
+    const session = store.getSession(info.tokenHash);
+    const p = room.participants.find(x => x.id === info.participant && !x.removed && x.session === info.session);
+    if (!session || session.id !== info.session || session.expires <= now() || !p) { ws.close(4003, 'Access ended'); return; }
+    if (room.expires <= now()) { ws.close(4004, 'Table expired'); return; }
+    return p;
+  };
+  const deliver = (room: Room, message: ServerMessage, recipient?: string, except?: string) => {
+    for (const [ws, info] of sockets) {
+      if (info.room !== room.id || ws.readyState !== WebSocket.OPEN) continue;
+      if (!socketMember(ws, info, room)) continue;
+      if (recipient && info.participant !== recipient || except && info.participant === except) continue;
+      send(ws, message);
+    }
+  };
+  const notify = (room: Room, notification: RoomNotification, recipient?: string, except?: string) => deliver(room, { type: 'notification', notification }, recipient, except);
+  const socialHistory = (room: Room, ws?: WebSocket) => {
+    const history = social.history(room.id);
+    if (announcedEpochs.get(room.id) !== history.epoch) {
+      announcedEpochs.set(room.id, history.epoch); deliver(room, history);
+    } else if (ws) send(ws, history);
+    return history;
+  };
+  const committedSocial = (before: Room, after: Room, reset: boolean) => {
+    const code = reset ? 'reset' : before.game?.winner === null && after.game?.winner !== null && after.game?.winner !== undefined ? 'completed' : null;
+    if (code) {
+      socialHistory(after);
+      deliver(after, social.system(after.id, code));
+      notify(after, notice(now(), { kind: 'system', code, revision: after.revision }));
+    }
+    for (const p of after.participants) {
+      if (p.removed || p.readOnly || p.seat === null) continue;
+      const old = before.participants.find(x => x.id === p.id && !x.removed);
+      const kind = decisionTransition(old ? view(before, old).game : undefined, view(after, p).game);
+      if (kind) notify(after, notice(now(), { kind, revision: after.revision }), p.id);
+    }
+  };
 
   /** Each socket receives only its own participant's projection. */
   const broadcast = (room: Room) => {
     for (const [ws, info] of sockets) {
       if (info.room !== room.id || ws.readyState !== WebSocket.OPEN) continue;
-      const p = room.participants.find(x => x.id === info.participant && !x.removed && x.session === info.session);
-      if (!p) { ws.close(4003, 'Access ended'); continue; }
-      if (ws.bufferedAmount > 2_000_000) { ws.close(4008, 'Reconnect required'); continue; }
+      const p = socketMember(ws, info, room);
+      if (!p) continue;
       send(ws, { type: 'snapshot', view: view(room, p) });
     }
   };
@@ -249,6 +294,7 @@ export function createServer(options: ServerOptions) {
       touch(next, message);
       save(next, { actor: p.id, request: b.requestId as string, fingerprint });
       broadcast(next);
+      committedSocial(room, next, command.type === 'reset');
       if (command.type === 'rotate-invite' || command.type === 'remove' || command.type === 'reset') log({ event: `room.${command.type}` });
       json(res, 200, actor.removed ? { left: true } : { view: view(next, actor), ...(stale ? { rebased: true } : {}) });
     } catch (e) {
@@ -262,7 +308,7 @@ export function createServer(options: ServerOptions) {
   server.requestTimeout = 15_000;
   server.headersTimeout = 10_000;
 
-  const wss = new WebSocketServer({ noServer: true, maxPayload: 1024, perMessageDeflate: false });
+  const wss = new WebSocketServer({ noServer: true, maxPayload: SOCIAL_LIMITS.payloadBytes, perMessageDeflate: false });
   server.on('upgrade', (req, socket, head) => {
     try {
       requireThat(ready && req.headers.origin === allowedOrigin(req), 403, 'ORIGIN_REJECTED');
@@ -275,24 +321,68 @@ export function createServer(options: ServerOptions) {
       const p = member(room, session);
       requireThat([...sockets.values()].filter(s => s.participant === p.id).length < 4, 429, 'TAB_LIMIT');
       wss.handleUpgrade(req, socket, head, ws => {
-        const info: SocketInfo = { room: room.id, participant: p.id, session: session.id, last: 0, checked: now() };
+        const wasConnected = connectedIn(room.id).has(p.id);
+        const connectionKey = `${room.id}:${p.id}`;
+        const recovering = disconnects.has(connectionKey);
+        clearTimeout(disconnects.get(connectionKey)); disconnects.delete(connectionKey);
+        const info: SocketInfo = { room: room.id, participant: p.id, session: session.id, tokenHash: sha(rawCookie(req)!), last: 0 };
         sockets.set(ws, info);
-        broadcast(loadRoom(room.id));
         ws.on('error', () => ws.close());
         ws.on('message', data => {
-          if (now() - info.last < 50) return; // presence is throttled and lossy by design
-          info.last = now();
+          let current: Room;
+          try { current = loadRoom(info.room); } catch { ws.close(4004, 'Table closed'); return; }
+          const actor = socketMember(ws, info, current); if (!actor) return;
           const msg = parseClientMessage(data.toString());
-          if (!msg) return;
-          if (now() - info.checked > 1000) {
-            info.checked = now();
-            try { const r = loadRoom(info.room); if (!r.participants.some(x => x.id === info.participant && x.session === info.session && !x.removed)) { ws.close(4003, 'Access ended'); return; } }
-            catch { ws.close(4004, 'Table closed'); return; }
+          // Valid pointers have their own lossy throttle and cannot consume chat's attempt budget.
+          if ((!msg || msg.type === 'chat-send') && !social.attempt(info.room, info.participant)) { ws.close(4008, 'Message limit; reconnect required'); return; }
+          if (!msg) {
+            try {
+              const invalid: unknown = JSON.parse(data.toString());
+              if (invalid && typeof invalid === 'object' && 'type' in invalid && invalid.type === 'chat-send' && 'requestId' in invalid && validRequestId(invalid.requestId)) send(ws, { type: 'chat-result', requestId: invalid.requestId, ok: false, code: 'CHAT_INVALID' });
+            } catch { /* malformed frames are bounded, never relayed */ }
+            return;
           }
+          if (msg.type === 'chat-send') {
+            try {
+              socialHistory(current);
+              const accepted = social.accept(current, actor, msg);
+              if (!accepted.duplicate) {
+                deliver(current, { type: 'chat-message', epoch: accepted.epoch, entry: accepted.entry });
+                if (accepted.entry.kind === 'user') for (const id of new Set(accepted.entry.parts.flatMap(part => part.type === 'mention' ? [part.participantId] : []))) {
+                  if (id !== actor.id) notify(current, notice(now(), { kind: 'mention', participantId: actor.id, messageId: accepted.messageId }), id);
+                }
+              }
+              send(ws, { type: 'chat-result', requestId: msg.requestId, ok: true, epoch: accepted.epoch, messageId: accepted.messageId });
+            } catch (e) {
+              send(ws, { type: 'chat-result', requestId: msg.requestId, ok: false, code: e instanceof SocialError ? e.code : 'CHAT_INVALID' });
+            }
+            return;
+          }
+          if (now() - info.last < 50) return;
+          info.last = now();
           const out = JSON.stringify({ type: msg.type, participantId: info.participant, x: msg.x, y: msg.y, surface: msg.surface } satisfies ServerMessage);
-          for (const [other, peer] of sockets) if (other !== ws && peer.room === info.room && other.readyState === WebSocket.OPEN && other.bufferedAmount < 64_000) other.send(out);
+          for (const [other, peer] of sockets) if (other !== ws && peer.room === info.room && other.readyState === WebSocket.OPEN && socketMember(other, peer, current) && other.bufferedAmount < 64_000) other.send(out);
         });
-        ws.on('close', () => { sockets.delete(ws); try { broadcast(loadRoom(info.room)); } catch { /* room expired or closed */ } });
+        ws.on('close', () => {
+          sockets.delete(ws);
+          if (!ready || connectedIn(info.room).has(info.participant) || disconnects.has(connectionKey)) return;
+          const timer = setTimeout(() => {
+            disconnects.delete(connectionKey);
+            if (!ready || connectedIn(info.room).has(info.participant)) return;
+            try {
+              const current = loadRoom(info.room);
+              const participant = current.participants.find(x => x.id === info.participant && !x.removed);
+              broadcast(current);
+              if (participant) notify(current, notice(now(), { kind: 'disconnected', participantId: participant.id, nickname: participant.nickname }), undefined, participant.id);
+            } catch { /* room expired or removed */ }
+          }, 3000);
+          timer.unref(); disconnects.set(connectionKey, timer);
+        });
+        // Handlers are registered before initial delivery, including an early chat-send.
+        const current = loadRoom(room.id);
+        broadcast(current);
+        if (socketMember(ws, info, current)) socialHistory(current, ws);
+        if (!wasConnected && !recovering) notify(current, notice(now(), { kind: 'reconnected', participantId: p.id, nickname: p.nickname }), undefined, p.id);
       });
     } catch (e) {
       const code = e instanceof ApiError ? e.status : 500;
@@ -301,19 +391,29 @@ export function createServer(options: ServerOptions) {
     }
   });
 
-  const maintenance = setInterval(() => {
+  const runMaintenance = () => {
     for (const [key, r] of rates) if (now() - r.start > DAY) rates.delete(key);
     try {
       const expired = store.expire(now());
       for (const id of expired) for (const [ws, s] of sockets) if (s.room === id) ws.close(4004, 'Table expired');
+      social.cleanup(id => { const r = store.getRoom(id); return !!r && r.expires > now(); });
+      for (const id of expired) announcedEpochs.delete(id);
+      for (const [key, timer] of disconnects) if (expired.some(id => key.startsWith(`${id}:`))) { clearTimeout(timer); disconnects.delete(key); }
+      for (const [ws, info] of sockets) {
+        const room = store.getRoom(info.room);
+        if (!room) ws.close(4004, 'Table expired'); else socketMember(ws, info, room);
+      }
       if (expired.length) log({ event: 'rooms.expired', count: expired.length });
+      return expired;
     } catch (e) { log({ event: 'error', route: 'maintenance', message: e instanceof Error ? e.message.slice(0, 200) : 'unknown' }); }
-  }, 60_000);
+    return [];
+  };
+  const maintenance = setInterval(runMaintenance, 60_000);
   maintenance.unref();
 
   return {
     store, server,
-    runMaintenance: () => store.expire(now()),
+    runMaintenance,
     listen: () => new Promise<number>((done, reject) => {
       server.once('error', reject);
       server.listen(options.port ?? 3000, options.host ?? '127.0.0.1', () => { const a = server.address(); done(typeof a === 'object' && a ? a.port : 0); });
@@ -321,6 +421,8 @@ export function createServer(options: ServerOptions) {
     close: async () => {
       ready = false;
       clearInterval(maintenance);
+      for (const timer of disconnects.values()) clearTimeout(timer);
+      disconnects.clear(); social.clear(); announcedEpochs.clear();
       for (const ws of sockets.keys()) ws.close(1001, 'Server restarting');
       await new Promise<void>(done => wss.close(() => done()));
       server.closeAllConnections?.();

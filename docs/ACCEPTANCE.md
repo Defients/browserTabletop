@@ -3,6 +3,25 @@
 Statuses: **VERIFIED** (automated and/or browser evidence on the final tree) · **UNVERIFIED** · **BLOCKED** · **OUT_OF_SCOPE**.
 Test names refer to `tests/*.test.ts` (Node test runner) and `e2e/*.spec.ts` (Playwright, Chromium + Firefox, genuine production server). Final gate results: [`STATUS.md`](../STATUS.md).
 
+## Player Assistance + Social Layer — September 29, 2026
+
+These rows describe local feature evidence, not public deployment or broader Full-rules certification. Final-tree gate totals are recorded in `STATUS.md`.
+
+| Requirement | Implementation | Evidence | Status |
+|---|---|---|---|
+| Authorized live room chat in every online profile; ordinary spectators send, read-only spectators read | `social.ts`, `server.ts`, `ChatPanel.tsx` | `social-server.test.ts` roles, identity, isolated rooms, recovery/revocation/session expiry; `social.spec.ts` forged read-only send | VERIFIED |
+| Structured plain-text content, authoritative names/time/order, participant-ID mentions, retained-room replies and allowlisted rules | protocol parsers, server sidecar | `social-protocol.test.ts`, social server adversarial cases; browser literal HTML/rules modal/reply | VERIFIED |
+| Unread, local mute, scroll preservation, explicit retry and draft preservation | room social external store + chat UI | `room-social.test.ts`; browser scroll/jump, mute, rate refusal/retry, same-epoch reconnect, IME | VERIFIED |
+| Bounded ephemeral history/dedup/rate state, restart/idle epoch, slow consumer, no durable mutation | per-server `createSocial`, checked delivery/maintenance | real socket history/restart/rate/attempt/save-failure/expiry tests; measured-buffer injection tests close/recover through actual sockets | VERIFIED |
+| Private choice/response/turn, mention, connection and safe system notices; duplicate suppression | post-commit projection transitions, aggregate connections, client queue | private response→choice and turn recipients; failed-save/duplicate/stale reset; debounce tabs; bounded/dismissible queue; browser mention | VERIFIED |
+| Suggested Moves above Possible Moves, all ordinary choices retained, one submission callback, pending/disconnected guard | GameBoard latest-key handler | browser exact HTTP payload, disabled execution; ranking immutable/deterministic/private-evidence tests | VERIFIED |
+| Full ordered composite sources/costs select exact authoritative action | shared complete identity and narrow engine parser | `actionIdentity.test.ts`, actual HTTP `actionIdentity.server.test.ts` | VERIFIED |
+| Local First Contact suggestions; authored lessons opt out; static hosting makes no social/API calls | practice default, explicit Learn opt-out | existing lesson/practice browser suites; expanded `e2e-static/neocities.spec.ts` | VERIFIED after final static gate recorded in STATUS |
+| Desktop/tablet/mobile emulation, contrast/keyboard/focus/reduced motion | native CSS dock/mobile Modal | social browser tests at 1440×900, 1024×768, 390×844, axe serious/critical checks; `artifacts/screens/social-*` visually inspected | VERIFIED |
+| Real mobile devices, WebKit and distributed/multi-process social history | — | unavailable devices/engine; single-process design | UNVERIFIED / OUT_OF_SCOPE |
+
+Known unrelated limitation: `scripts/diagnose-large-hand.ts` reproduces a Full composite-enumeration spread overflow for one synthetic 23-card hand, including on baseline `d9fd2ee`; see `artifacts/verification/social-large-hand-diagnostic.txt`. This is not a universal hand-size threshold or a new ranking failure. Existing Full reveal/expiry gaps and First Contact source-map D-1/D-3 remain outside this feature's rules coverage.
+
 | # | Requirement (master prompt) | Implementation | Automated evidence | Browser evidence | Status |
 |---|---|---|---|---|---|
 | 1 | Create table → template → invitation → guest joins → play → return | `apps/server/server.ts`, `apps/web/Online.tsx` | server.test: invites, seats | walkthrough.spec (3 contexts) | VERIFIED |

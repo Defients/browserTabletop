@@ -1,0 +1,29 @@
+Synthetic Full large-hand diagnostic
+Verified September 29, 2026 (America/New_York), Node 24.21.0.
+
+Reproduction from repository root:
+.\node_modules\node\bin\node.exe --import tsx scripts/diagnose-large-hand.ts
+
+Fixture: intrilex-full; player 0 hand (23 cards):
+2♣ 2♦ 2♥ 2♠ 3♣ 3♠ 4♣ 4♠ 5♣ 5♠ 6♠ 7♠ 8♣ 8♠ 10♦ 10♣ J♣ J♠ Q♣ Q♠ K♠ RJ BJ
+Player 1 hand: A♥ A♦. Player 1 PR: 9♥. Exile: 10♥.
+All remaining cards are supplied by the ordinary fixture builder; no live data is used.
+
+Current working-tree result: exit 1, RangeError: Maximum call stack size exceeded.
+Top frames: ordinaryActions, packages/intrilex/engine.ts:372:9;
+availableActions, packages/intrilex/engine.ts:401:22.
+Failing statement: out.push(...compositeActions(s,p,false)).
+
+Baseline reproduction: all packages/intrilex files were extracted read-only with
+git ls-tree / git show HEAD:<path> into a new temporary directory. The same
+diagnostic was copied there with its index import changed to ./index.js, then
+executed using the same project-local Node executable and tsx loader.
+Baseline HEAD: d9fd2eec71d85b18b647fdd39d2add91da1665f1.
+Baseline result: exit 1, identical RangeError.
+Top frames: ordinaryActions, baseline engine.ts:371:9;
+availableActions, baseline engine.ts:400:22.
+
+Conclusion: this fixture's composite enumeration failure predates the social /
+suggestion patch. No engine enumeration change was made for this diagnostic.
+This evidence demonstrates one large-hand failure; it does not establish a
+universal hand-size threshold or browser-specific behavior.

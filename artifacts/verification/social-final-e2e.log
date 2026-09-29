@@ -1,0 +1,259 @@
+
+> browser-tabletop@1.0.0 test:e2e
+> npm run build && playwright test
+
+
+> browser-tabletop@1.0.0 build
+> npm run typecheck && vite build && esbuild apps/server/index.ts apps/server/backup.ts apps/server/restore.ts --bundle --platform=node --format=esm --packages=external --outdir=dist/server
+
+
+> browser-tabletop@1.0.0 typecheck
+> tsc --noEmit
+
+vite v8.3.1 building client environment for production...
+transforming...
+✓ 44 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/index.html                   0.60 kB │ gzip:   0.39 kB
+dist/client/assets/index-Dfp2H8jp.css   46.23 kB │ gzip:  11.19 kB
+dist/client/assets/index-BuGQ6QaY.js   466.94 kB │ gzip: 141.87 kB
+
+✓ built in 228ms
+
+  dist\server\index.js    189.9kb
+  dist\server\restore.js    1.5kb
+  dist\server\backup.js     1.2kb
+
+Done in 49ms
+
+Running 38 tests using 1 worker
+
+(node:8520) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium] › e2e\full.spec.ts:6:1 › Full table preserves public/private zones through play, reconnect and reset on mobile (8.6s)
+  ok  2 [chromium] › e2e\learn.spec.ts:12:1 › all lessons complete through real interactions, reject wrong moves, and persist progress (5.8s)
+  ok  3 [chromium] › e2e\learn.spec.ts:85:1 › a complete First Contact practice game against the local opponent, using only offered legal actions (9.3s)
+  ok  4 [chromium] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 1440×900 (6.0s)
+  ok  5 [chromium] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 1024×768 (5.0s)
+  x   6 [chromium] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 390×844 (4.3s)
+(node:16952) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  7 [chromium] › e2e\quality.spec.ts:59:1 › keyboard-only: create a table, open and close dialogs with focus restored, play an action (1.3s)
+  ok  8 [chromium] › e2e\quality.spec.ts:96:1 › reduced motion is honoured (518ms)
+  ok  9 [chromium] › e2e\quality.spec.ts:105:1 › performance: 8 seats and 108 cards; remote cursors do not re-render the durable board (4.0s)
+  ok 10 [chromium] › e2e\social.spec.ts:30:1 › real room social journey: unread, identity mention, reply, literal HTML, local mute, rules, read-only and reconnect (8.3s)
+  ok 11 [chromium] › e2e\social.spec.ts:68:1 › suggested move uses current exact legal action over HTTP; pending and disconnected execution are disabled (2.8s)
+  x  12 [chromium] › e2e\social.spec.ts:91:1 › scroll position, unread watermark and same-epoch reconnect survive live chat; rejected draft retries explicitly (15.8s)
+(node:27148) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 13 [chromium] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 1440×900 (2.7s)
+  ok 14 [chromium] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 1024×768 (2.3s)
+  ok 15 [chromium] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 390×844 (2.3s)
+  ok 16 [chromium] › e2e\social.spec.ts:137:1 › Full offers projected Start suggestions and live chat; Core keeps chat with manual actions only (4.4s)
+  ok 17 [chromium] › e2e\templates.spec.ts:9:1 › author a template in the editor, export it, re-import it, play it online with two browsers, export without live state (4.9s)
+  ok 18 [chromium] › e2e\templates.spec.ts:93:1 › malformed and oversized imports fail with useful messages and change nothing (1.2s)
+  ok 19 [chromium] › e2e\walkthrough.spec.ts:9:1 › host, guest and spectator play First Contact across isolated browsers with restart recovery (9.6s)
+(node:29996) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  20 [firefox] › e2e\full.spec.ts:6:1 › Full table preserves public/private zones through play, reconnect and reset on mobile (22.2s)
+(node:37784) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  21 [firefox] › e2e\learn.spec.ts:12:1 › all lessons complete through real interactions, reject wrong moves, and persist progress (20.4s)
+(node:32844) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 22 [firefox] › e2e\learn.spec.ts:85:1 › a complete First Contact practice game against the local opponent, using only offered legal actions (23.2s)
+  ok 23 [firefox] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 1440×900 (9.7s)
+  ok 24 [firefox] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 1024×768 (8.6s)
+  ok 25 [firefox] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 390×844 (7.0s)
+  ok 26 [firefox] › e2e\quality.spec.ts:59:1 › keyboard-only: create a table, open and close dialogs with focus restored, play an action (2.1s)
+  ok 27 [firefox] › e2e\quality.spec.ts:96:1 › reduced motion is honoured (806ms)
+  ok 28 [firefox] › e2e\quality.spec.ts:105:1 › performance: 8 seats and 108 cards; remote cursors do not re-render the durable board (4.2s)
+  x  29 [firefox] › e2e\social.spec.ts:30:1 › real room social journey: unread, identity mention, reply, literal HTML, local mute, rules, read-only and reconnect (24.7s)
+(node:48664) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 30 [firefox] › e2e\social.spec.ts:68:1 › suggested move uses current exact legal action over HTTP; pending and disconnected execution are disabled (6.0s)
+  x  31 [firefox] › e2e\social.spec.ts:91:1 › scroll position, unread watermark and same-epoch reconnect survive live chat; rejected draft retries explicitly (28.9s)
+(node:31204) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 32 [firefox] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 1440×900 (7.2s)
+  ok 33 [firefox] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 1024×768 (4.7s)
+  ok 34 [firefox] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 390×844 (3.3s)
+  ok 35 [firefox] › e2e\social.spec.ts:137:1 › Full offers projected Start suggestions and live chat; Core keeps chat with manual actions only (15.2s)
+  ok 36 [firefox] › e2e\templates.spec.ts:9:1 › author a template in the editor, export it, re-import it, play it online with two browsers, export without live state (18.6s)
+  ok 37 [firefox] › e2e\templates.spec.ts:93:1 › malformed and oversized imports fail with useful messages and change nothing (1.5s)
+  ok 38 [firefox] › e2e\walkthrough.spec.ts:9:1 › host, guest and spectator play First Contact across isolated browsers with restart recovery (26.5s)
+
+
+  1) [chromium] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 390×844 ─────────
+
+    Error: browserContext.close: ENOENT: no such file or directory, open 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-0\traces\f46baca133b10bf87db1-07945cdf0869435afc00-recording14.trace'
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\quality-layout-and-automated-accessibility-at-390×844-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\quality-layout-and-automated-accessibility-at-390×844-chromium\error-context.md
+
+    Error Context: test-results\quality-layout-and-automated-accessibility-at-390×844-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\quality-layout-and-automated-accessibility-at-390×844-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\quality-layout-and-automated-accessibility-at-390×844-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › e2e\social.spec.ts:91:1 › scroll position, unread watermark and same-epoch reconnect survive live chat; rejected draft retries explicitly 
+
+    Error: apiRequestContext._wrapApiCall: ENOENT: no such file or directory, copyfile 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-1\traces\3bd26b923e159664f17e-4d751132a674f2927b69-recording17.network' -> 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-1\traces\3bd26b923e159664f17e-4d751132a674f2927b69-recording17-pwnetcopy-1.network'
+
+      112 |     await host!.waitForTimeout(10_100); await host!.getByRole('button', { name: 'Retry same message', exact: true }).click();
+      113 |     await expect(host!.getByLabel('Message the room')).toHaveValue(''); await expect(guest!.locator('.chat-entry')).toHaveCount(7); await expect(guest!.locator('.chat-body').filter({ hasText: 'Rate-limited draft preserved' })).toHaveCount(1);
+    > 114 |   } finally { for (const context of clients.contexts) await context.close(); await backend.stop(); }
+          |                                                                     ^
+      115 | });
+      116 |
+      117 | for (const [width, height] of [[1440, 900], [1024, 768], [390, 844]] as const) {
+        at D:\CodexProjects\browser-tabletop\e2e\social.spec.ts:114:69
+
+    Error: browserContext._wrapApiCall: ENOENT: no such file or directory, open 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-1\traces\3bd26b923e159664f17e-4d751132a674f2927b69-recording16.trace'
+
+    Error: ENOENT: no such file or directory, open 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-1\ba3830e1e02f667b27b6521ec619c990.zip'
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\social-scroll-position-unr-45ac2-ed-draft-retries-explicitly-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\social-scroll-position-unr-45ac2-ed-draft-retries-explicitly-chromium\test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [firefox] › e2e\full.spec.ts:6:1 › Full table preserves public/private zones through play, reconnect and reset on mobile 
+
+    Error: apiRequestContext._wrapApiCall: ENOENT: no such file or directory, copyfile 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-3\traces\9f86176f09d67e9395e1-e2f613ef7f7518a8ecc5-recording1.network' -> 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-3\traces\9f86176f09d67e9395e1-e2f613ef7f7518a8ecc5-recording1-pwnetcopy-1.network'
+
+      83 |     for (const error of errors) expect(error).toEqual([]);
+      84 |   } finally {
+    > 85 |     for (const context of contexts) await context.close();
+         |                                                   ^
+      86 |     await backend.stop();
+      87 |   }
+      88 | });
+        at D:\CodexProjects\browser-tabletop\e2e\full.spec.ts:85:51
+
+    Error: browserContext._wrapApiCall: ENOENT: no such file or directory, open 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-3\traces\9f86176f09d67e9395e1-e2f613ef7f7518a8ecc5.trace'
+
+    Error: ENOENT: no such file or directory, open 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-3\016dcde4a45142856abf6e2c151ea407.zip'
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\full-Full-table-preserves--75dac-connect-and-reset-on-mobile-firefox\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\full-Full-table-preserves--75dac-connect-and-reset-on-mobile-firefox\test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\full-Full-table-preserves--75dac-connect-and-reset-on-mobile-firefox\test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [firefox] › e2e\learn.spec.ts:12:1 › all lessons complete through real interactions, reject wrong moves, and persist progress 
+
+    Error: browserContext.close: ENOENT: no such file or directory, open 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-4\traces\189e4fdbb486cae0c630-08de9f61c2dd3be1e2aa.trace'
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\learn-all-lessons-complete-b8b8e--moves-and-persist-progress-firefox\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\learn-all-lessons-complete-b8b8e--moves-and-persist-progress-firefox\error-context.md
+
+    Error Context: test-results\learn-all-lessons-complete-b8b8e--moves-and-persist-progress-firefox\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\learn-all-lessons-complete-b8b8e--moves-and-persist-progress-firefox\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\learn-all-lessons-complete-b8b8e--moves-and-persist-progress-firefox\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [firefox] › e2e\social.spec.ts:30:1 › real room social journey: unread, identity mention, reply, literal HTML, local mute, rules, read-only and reconnect 
+
+    Error: apiRequestContext._wrapApiCall: ENOENT: no such file or directory, copyfile 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-5\traces\3bd26b923e159664f17e-84e1b3b83fefd6201dfa-recording15.network' -> 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-5\traces\3bd26b923e159664f17e-84e1b3b83fefd6201dfa-recording15-pwnetcopy-1.network'
+
+      63 |     await backend.restart(); await expect(guest!.getByText(/Earlier chat is unavailable:/)).toBeVisible({ timeout: 20_000 }); await expect(guest!.locator('.chat-entry')).toHaveCount(0);
+      64 |     expect(errors).toEqual([[], [], []]);
+    > 65 |   } finally { for (const context of clients.contexts) await context.close(); await backend.stop(); }
+         |                                                                     ^
+      66 | });
+      67 |
+      68 | test('suggested move uses current exact legal action over HTTP; pending and disconnected execution are disabled', async ({ browser }) => {
+        at D:\CodexProjects\browser-tabletop\e2e\social.spec.ts:65:69
+
+    Error: browserContext._wrapApiCall: ENOENT: no such file or directory, open 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-5\traces\3bd26b923e159664f17e-84e1b3b83fefd6201dfa-recording14.trace'
+
+    Error: ENOENT: no such file or directory, open 'D:\CodexProjects\browser-tabletop\test-results\.playwright-artifacts-5\6ce70fb71d473b2bdd1834c22bf55c01.zip'
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\social-real-room-social-jo-caef7-les-read-only-and-reconnect-firefox\test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\social-real-room-social-jo-caef7-les-read-only-and-reconnect-firefox\test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\social-real-room-social-jo-caef7-les-read-only-and-reconnect-firefox\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [firefox] › e2e\social.spec.ts:91:1 › scroll position, unread watermark and same-epoch reconnect survive live chat; rejected draft retries explicitly 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Message failed.', { exact: true })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('Message failed.', { exact: true }) with timeout 10000ms
+      - waiting for getByText('Message failed.', { exact: true })
+
+
+      109 |     await expect(guest!.locator('.save-state')).toHaveText(/Saved/, { timeout: 15_000 }); await expect(trigger(guest!)).toHaveText(/1 unread/); await openChat(guest!); await expect(guest!.locator('.chat-entry')).toHaveCount(6);
+      110 |     await host!.getByLabel('Message the room').fill('Rate-limited draft preserved'); await host!.getByRole('button', { name: 'Send message', exact: true }).click();
+    > 111 |     await expect(host!.getByText('Message failed.', { exact: true })).toBeVisible(); await expect(host!.getByLabel('Message the room')).toHaveValue('Rate-limited draft preserved'); await expect(host!.locator('.save-state')).toHaveText(/Saved/);
+          |                                                                       ^
+      112 |     await host!.waitForTimeout(10_100); await host!.getByRole('button', { name: 'Retry same message', exact: true }).click();
+      113 |     await expect(host!.getByLabel('Message the room')).toHaveValue(''); await expect(guest!.locator('.chat-entry')).toHaveCount(7); await expect(guest!.locator('.chat-body').filter({ hasText: 'Rate-limited draft preserved' })).toHaveCount(1);
+      114 |   } finally { for (const context of clients.contexts) await context.close(); await backend.stop(); }
+        at D:\CodexProjects\browser-tabletop\e2e\social.spec.ts:111:71
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\social-scroll-position-unr-45ac2-ed-draft-retries-explicitly-firefox\test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\social-scroll-position-unr-45ac2-ed-draft-retries-explicitly-firefox\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\social-scroll-position-unr-45ac2-ed-draft-retries-explicitly-firefox\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\social-scroll-position-unr-45ac2-ed-draft-retries-explicitly-firefox\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\social-scroll-position-unr-45ac2-ed-draft-retries-explicitly-firefox\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6 failed
+    [chromium] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 390×844 ──────────
+    [chromium] › e2e\social.spec.ts:91:1 › scroll position, unread watermark and same-epoch reconnect survive live chat; rejected draft retries explicitly 
+    [firefox] › e2e\full.spec.ts:6:1 › Full table preserves public/private zones through play, reconnect and reset on mobile 
+    [firefox] › e2e\learn.spec.ts:12:1 › all lessons complete through real interactions, reject wrong moves, and persist progress 
+    [firefox] › e2e\social.spec.ts:30:1 › real room social journey: unread, identity mention, reply, literal HTML, local mute, rules, read-only and reconnect 
+    [firefox] › e2e\social.spec.ts:91:1 › scroll position, unread watermark and same-epoch reconnect survive live chat; rejected draft retries explicitly 
+  32 passed (5.9m)

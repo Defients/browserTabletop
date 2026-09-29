@@ -1,14 +1,14 @@
 import { memo, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent, type KeyboardEvent as RKeyboardEvent } from 'react';
 import type { CardView, Component, TableCommand, TableView, ZoneView } from '../../packages/tabletop/types.js';
 import { CARD_HEIGHT, CARD_WIDTH } from '../../packages/tabletop/index.js';
-import type { ClientMessage, ParticipantView } from '../../packages/protocol/index.js';
+import type { PointerClientMessage, ParticipantView } from '../../packages/protocol/index.js';
 import { CardFace, Modal, cardName, typingTarget } from './common.js';
 import { PresenceLayer } from './Presence.js';
 
 export interface TableBoardProps {
   view: TableView; seat: number | null; host: boolean; art: Record<string, string>;
   onCommand: (c: TableCommand) => unknown; participants?: ParticipantView[];
-  presence?: (m: ClientMessage) => void; canUndo?: boolean; onUndo?: () => void; readOnly?: boolean;
+  presence?: (m: PointerClientMessage) => void; canUndo?: boolean; onUndo?: () => void; readOnly?: boolean;
 }
 
 type Drag = { kind: 'cards'; ids: string[]; sx: number; sy: number; moved: boolean; pointer: number } | { kind: 'pan'; sx: number; sy: number; px: number; py: number; pointer: number } | { kind: 'object'; id: string; sx: number; sy: number; ox: number; oy: number; moved: boolean; pointer: number };

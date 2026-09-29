@@ -1,0 +1,26 @@
+
+> browser-tabletop@1.0.0 start
+> node dist/server/index.js
+
+{"t":"2026-09-29T22:02:33.990Z","event":"listening","host":"127.0.0.1","port":3000}
+{"t":"2026-09-29T22:02:36.255Z","event":"http","method":"GET","route":"/ready","status":200,"ms":4}
+{"t":"2026-09-29T22:02:38.766Z","event":"http","method":"GET","route":"/ready","status":200,"ms":1}
+{"t":"2026-09-29T22:02:38.851Z","event":"http","method":"GET","route":"/api/session","status":200,"ms":3}
+{"t":"2026-09-29T22:02:38.856Z","event":"http","method":"GET","route":"/api/rooms","status":200,"ms":1}
+{"t":"2026-09-29T22:02:39.525Z","event":"room.created","profile":"intrilex-first-contact"}
+{"t":"2026-09-29T22:02:39.528Z","event":"http","method":"POST","route":"/api/rooms","status":201,"ms":12}
+{"t":"2026-09-29T22:02:39.536Z","event":"http","method":"GET","route":"/api/rooms/:id","status":200,"ms":2}
+{"t":"2026-09-29T22:02:39.597Z","event":"http","method":"GET","route":"/api/rooms/:id/template","status":200,"ms":0}
+{"t":"2026-09-29T22:02:39.598Z","event":"http","method":"GET","route":"/api/rooms/:id/invites","status":200,"ms":1}
+{"t":"2026-09-29T22:02:43.056Z","event":"http","method":"GET","route":"/ready","status":200,"ms":1}
+{"t":"2026-09-29T22:02:43.122Z","event":"http","method":"GET","route":"/api/session","status":200,"ms":2}
+{"t":"2026-09-29T22:02:43.126Z","event":"http","method":"GET","route":"/api/rooms","status":200,"ms":1}
+{"t":"2026-09-29T22:02:43.638Z","event":"room.created","profile":"intrilex-first-contact"}
+{"t":"2026-09-29T22:02:43.639Z","event":"http","method":"POST","route":"/api/rooms","status":201,"ms":6}
+{"t":"2026-09-29T22:02:43.649Z","event":"http","method":"GET","route":"/api/rooms/:id","status":200,"ms":1}
+{"t":"2026-09-29T22:02:43.708Z","event":"http","method":"GET","route":"/api/rooms/:id/template","status":200,"ms":0}
+{"t":"2026-09-29T22:02:43.709Z","event":"http","method":"GET","route":"/api/rooms/:id/invites","status":200,"ms":0}
+{"t":"2026-09-29T22:03:08.157Z","event":"http","method":"POST","route":"/api/rooms","status":403,"ms":0}
+{"t":"2026-09-29T22:03:10.867Z","event":"http","method":"GET","route":"/ready","status":200,"ms":0}
+{"t":"2026-09-29T22:03:11.478Z","event":"http","method":"GET","route":"/api/session","status":200,"ms":0}
+{"t":"2026-09-29T22:03:11.550Z","event":"http","method":"POST","route":"/api/rooms","status":403,"ms":0}

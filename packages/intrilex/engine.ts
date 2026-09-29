@@ -3,6 +3,7 @@ import type {
   Random, Rank, StackItem, Suit,
 } from './types.js';
 import { RULES } from './rules.js';
+import { actionKey, type GameActionInput } from './actionIdentity.js';
 
 /**
  * Intrilex v4.3.1 First Contact (§27, Canonical §15) traced through the generic rank rules it enables.
@@ -530,14 +531,17 @@ export function createGame(options: CreateOptions = {}): GameState {
 
 // ---------------------------------------------------------------- application
 
-const actionKey = (a: Pick<GameAction, 'type' | 'cardId' | 'targetId' | 'mode'>) => JSON.stringify([a.type, a.cardId ?? null, a.targetId ?? null, a.mode ?? null]);
-
-function parseAction(input: unknown): Pick<GameAction, 'type' | 'cardId' | 'targetId' | 'mode'> {
+function parseAction(input: unknown): GameActionInput {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return fail('INVALID_ACTION', 'A legal action is required.');
   const o = input as Record<string, unknown>;
   const opt = (v: unknown) => (v === undefined || v === null ? undefined : typeof v === 'string' && v.length <= 64 ? v : fail('INVALID_ACTION', 'Malformed action.'));
+  const ids = (v: unknown, max: number): string[] | undefined => {
+    if (v === undefined) return undefined;
+    if (!Array.isArray(v) || !v.length || v.length > max || !v.every(x => typeof x === 'string' && x.length > 0 && x.length <= 64) || new Set(v).size !== v.length) return fail('INVALID_ACTION', 'Malformed action.');
+    return v.map(x => String(x));
+  };
   if (typeof o.type !== 'string' || o.type.length > 32) fail('INVALID_ACTION', 'Malformed action.');
-  return { type: o.type as ActionType, cardId: opt(o.cardId), targetId: opt(o.targetId), mode: opt(o.mode) };
+  return { type: o.type as ActionType, cardId: opt(o.cardId), targetId: opt(o.targetId), mode: opt(o.mode), cardIds: ids(o.cardIds, 4), targetIds: ids(o.targetIds, 8) };
 }
 
 export function applyGame(state: GameState, p: number, input: unknown, random: Random = secureRandom): GameState {

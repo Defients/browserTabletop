@@ -1,0 +1,26 @@
+✔ social client parser normalizes Unicode/newlines, accepts ID chips and preserves pointer shape (5.8672ms)
+✔ social client parser refuses forged identity, malformed unions, scalar arrays, invalid IDs, controls and all content bounds (1.6975ms)
+✔ every server social variant round-trips through strict runtime validation (2.9822ms)
+✔ server parser refuses unsafe contexts, future/private fields, invalid stamps, ordering and counterfeit rules labels (1.9748ms)
+✔ social sockets: authoritative identity, all member roles, plain text, mentions, references, replies and no durable mutations (270.0663ms)
+✔ social retries: same request applies once, changed body is refused, cross-room references and identity claims cannot route data (406.3737ms)
+✔ social limits are shared by participant tabs; pointer storms do not consume or drop chat (518.4768ms)
+✔ social history is bounded, idle maintenance rotates epoch, restart loses chat while durable room survives (3339.6951ms)
+✔ recovery invalidates the old social socket before later messages, with authorization before retry lookup (121.5761ms)
+✔ invalid chat remains isolated and oversized frames close only the offending socket (223.6813ms)
+✔ socket expiry is checked on social delivery and send without chat extending room lifetime (108.398ms)
+✔ decision and reset notices follow commits; duplicates, stale commands, failed saves and spectators produce no extra decision notice (354.932ms)
+✔ connectivity notices count all tabs and debounce final disconnect with cancellation (6594.6633ms)
+✔ private response then discard choice notifications follow recipient projections, with choice taking precedence (101.4478ms)
+✔ slow-consumer policy closes rather than silently dropping an accepted social entry; history recovers it (50.2859ms)
+✔ malformed attempt budget is shared across tabs and closes abusive socket without affecting other participants (1284.545ms)
+✔ expired session is revoked on social delivery while refreshed host and durable room remain usable (90.2552ms)
+✔ victorious End emits one completed system entry; reset retains chat and duplicates replay neither entry nor notice (112.7764ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14333.2311

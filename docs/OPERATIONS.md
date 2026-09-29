@@ -86,6 +86,9 @@ Restore verifies integrity and schema compatibility; keep the old files for roll
 | Room activity history | newest 120 entries; card/game history newest 150–200 | older entries dropped |
 | Request receipts | newest 2000 per room | pruned on write |
 | Presence (cursors, pings) | never stored | — |
+| Room chat | latest 100 process-local entries | restart, room expiry or one hour of social inactivity |
+| Chat request deduplication | at most 200 per room, ten minutes | bounded eviction, expiry or restart; no durable retry guarantee |
+| Notifications | ephemeral client queue, at most five visible, 12-second expiry | dismissal, expiry, access termination, room/identity teardown |
 | Server logs | stdout JSON: route templates, status, timing, error codes; never tokens, invitations or card faces | per your log collector |
 
 ## Capacity and costs
@@ -97,3 +100,11 @@ Running it publicly costs real money or someone's hardware: a small always-on VM
 ## Neocities frontend
 
 For Neocities, keep this service's `ORIGIN` set to its own public HTTPS origin and `COOKIE_SECURE=true`. The static site's Create/Join links navigate to this origin, where the multiplayer UI, cookies, API and WebSocket remain same-origin. Do not set server `ORIGIN` to Neocities or add wildcard CORS. See [NEOCITIES.md](NEOCITIES.md).
+
+## Chat operation and retry limits
+
+Chat history and rate/dedup state live in the same single Node process as the authoritative SQLite service. Backups contain durable gameplay only; they do not preserve chat. Restart/recreation supplies a new social epoch and the UI explains that earlier history is unavailable. Reset keeps current chat and publishes a safe server-authored entry after the reset saves. Chat activity does not extend durable room retention or change game save status.
+
+Inbound WebSocket frames are capped at 16 KiB. The server shares six accepted chat messages per ten seconds across all tabs of one participant, and permits at most 40 chat/malformed attempts per ten seconds before closing the offending socket with 4008. Pointer traffic has a separate throttle. More than 2 MB queued outbound traffic also closes with 4008 instead of silently dropping accepted chat; reconnect retrieves retained history. All social delivery revalidates current stored session expiry and membership, including recovery invalidation.
+
+The client preserves failed drafts and marks unacknowledged sends uncertain. It never automatically resends after reconnect. An explicit same-request retry is safe only while the original acceptance remains in the bounded ten-minute/200-request cache. After expiry or epoch change, the UI labels a new send as potentially duplicating an earlier message. Routine logs exclude chat bodies and notification context. Local/static practice uses suggestions without connecting to social services; shared rooms continue top-level server-origin navigation.

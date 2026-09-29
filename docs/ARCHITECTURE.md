@@ -5,14 +5,14 @@ apps/web        React 19 + Vite client (DOM rendering, no canvas). Hash routes; 
 apps/server     Node HTTP + ws service. Sessions, rooms, invitations, durable commands, projections, presence.
 packages/tabletop   Generic, rules-free table engine: cards, zones, piles, components, permissions, handles, projection.
 packages/templates  Declarative template schema, built-in templates, validation, import/export.
-packages/intrilex   First Contact rules engine, fixtures, lessons, legal-only solo opponent, rule IDs.
+packages/intrilex   First Contact/Full rules engine, fixtures, lessons, legal-only solo opponent, projected suggestions, rule IDs.
 packages/protocol   Shared wire types: RoomView, RoomCommand, presence messages, error texts.
 ```
 
 ## State ownership
 
 - **Table state** (`TableState`) is canonical for free tables and the Core sandbox. The server holds it; clients receive `projectTable(state, seat)` only.
-- **Game state** (`GameState`) is canonical for First Contact. The board renders `projectGame(state, seat)` directly, so there is no second, separately mutable card layout that could drift from the rules. One validated command updates the game atomically.
+- **Game state** (`GameState`) is canonical for First Contact and Full. The board renders `projectGame(state, seat)` directly, so there is no second, separately mutable card layout that could drift from the rules. One validated command updates the game atomically.
 - **Room state** wraps either engine with participants, invitations, revision, history and expiry. Room administration (host) and game knowledge are separate: the host receives the same projection as any player in that seat.
 - **Templates** are data. A room pins a validated copy at creation; editing a template never changes existing rooms.
 
@@ -44,3 +44,13 @@ Pointer and ping messages are ephemeral WebSocket traffic (normalized coordinate
 ## Undo
 
 Only the last accepted command, by the same participant, with no later command, and only for public arrangement commands (table-to-table moves, rotate, arrange, attach, components, lock). Anything that draws, deals, shuffles, reveals, flips or crosses a hidden boundary is not undoable. First Contact has no undo.
+
+## Player assistance and social ownership
+
+`apps/server/social.ts` creates a bounded in-memory sidecar inside each `createServer()` instance. It stores plain-text history, normalized retry fingerprints, room-local chat order and rate state. It does not persist, retain canonical card/state references or participate in gameplay undo/receipts. The existing WebSocket routes social traffic; durable commands remain HTTP. Every social recipient and sender is checked against current SQLite session/room records. Accepted gameplay transitions generate safe system entries and private projection-derived decision notices only after the transaction succeeds.
+
+`apps/web/useRoomSocial.ts` owns a per-room/per-participant external store. Chat and notification components subscribe directly, so their message updates do not rerender the game board or pointer store. It merges epoch/history/live entries by message identity, retains local read/mute/collapse preferences, bounds pending sends and notices, and requires explicit retry after uncertain delivery. Socket callbacks are scoped to the current lifecycle; reconnect execution stays disabled until a fresh authorized snapshot. StrictMode effect replay reactivates the store while teardown clears listeners and timers.
+
+`packages/intrilex/suggestions.ts` takes only `GameView`, precomputes known public/own-card values, scores each current legal action once and selects at most two original actions with stable integer ties. No simulation, RNG, network or private backing state is used. Unsupported Full modes receive neutral, explicit fallback explanations. The board shares one execution handler between suggestions and Possible Moves, resolving a complete `actionKey` against the latest list at click time. Ordered source/cost arrays remain part of engine input identity. Lessons explicitly opt out; online First Contact/Full and local First Contact practice use suggestions. Manual tables have no recommendations.
+
+Social chips allow only participant IDs and rule IDs. Generic card/object references are intentionally absent, so shared history cannot automatically track hidden handles. User text may voluntarily disclose information; the application never enriches it with hidden engine data.

@@ -57,6 +57,8 @@ export default function App() {
   }
   const wide = page === 'room' || page === 'practice' || (page === 'learn' && !!a) || page === 'templates';
   return (
+    <>
+    <div className="ct-env" aria-hidden="true"><div className="ct-stars" /><div className="ct-orbit" /><div className="ct-orbit-2" /></div>
     <div className={`app ${wide ? 'app-wide' : ''}`}>
       <a className="skip-link" href="#main" onClick={e => { e.preventDefault(); document.getElementById('main')?.focus(); }}>Skip to content</a>
       <header className="topbar">
@@ -71,6 +73,7 @@ export default function App() {
       </header>
       <main id="main" tabIndex={-1}>{content}</main>
     </div>
+    </>
   );
 }
 

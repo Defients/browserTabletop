@@ -1,7 +1,9 @@
-import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { GameAction, GameCard, GameView } from '../../packages/intrilex/types.js';
 import { RULES, anchorValue, explainAction, explainCard } from '../../packages/intrilex/index.js';
-import type { ClientMessage, ParticipantView } from '../../packages/protocol/index.js';
+import type { PointerClientMessage, ParticipantView } from '../../packages/protocol/index.js';
+import { actionKey } from '../../packages/intrilex/actionIdentity.js';
+import { rankSuggestedMoves } from '../../packages/intrilex/suggestions.js';
 import { CardFace, Modal, cardName } from './common.js';
 import { PresenceLayer } from './Presence.js';
 
@@ -10,13 +12,14 @@ export interface GameBoardProps {
   view: GameView; onAction: (a: GameAction) => unknown; busy?: boolean;
   names?: [string, string]; hints?: boolean; onToggleHints?: () => void;
   onZone?: (z: BoardZone) => void; onInspectCard?: () => void; highlight?: BoardZone | null;
-  presence?: (m: ClientMessage) => void; participants?: ParticipantView[];
+  presence?: (m: PointerClientMessage) => void; participants?: ParticipantView[];
+  suggestions?: boolean;
   banner?: ReactNode;
 }
 
 const TYPE_ORDER: Record<string, number> = { choose: 0, 'generated-effect': 1, counter: 2, effect: 3, score: 4, scuttle: 5, draw: 6, decline: 7, 'exhausted-pass': 8, end: 9 };
 
-export default function GameBoard({ view, onAction, busy = false, names, hints = true, onToggleHints, onZone, onInspectCard, highlight, presence, participants = [], banner }: GameBoardProps) {
+export default function GameBoard({ view, onAction, busy = false, names, hints = true, onToggleHints, onZone, onInspectCard, highlight, presence, participants = [], banner, suggestions = true }: GameBoardProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [inspect, setInspect] = useState<GameCard | null>(null);
   const [gy, setGy] = useState(false);
@@ -31,6 +34,16 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
   const label = (p: number) => names?.[p] ?? (p === view.you ? 'You' : `Player ${p + 1}`);
   const handIds = new Set(view.hand.map(c => c.id));
   const visibleCards = [...view.hand, ...view.players.flatMap(p => [...p.pr, ...p.er, ...(p.revealedHand ?? [])]), ...(view.choice?.cards ?? []), ...(view.swapBar ?? []).flatMap(s => s.card ? [s.card] : [])];
+  const suggested = useMemo(() => suggestions ? rankSuggestedMoves(view) : [], [suggestions, view]);
+  const latest = useRef(view);
+  latest.current = view;
+  useEffect(() => { setSelected(null); setActionSearch(''); }, [view]);
+  const execute = (key: string) => {
+    if (busy) return;
+    const current = latest.current.legalActions.find(a => actionKey(a) === key);
+    if (!current || latest.current.you === null || latest.current.winner !== null) return;
+    onAction(current); setSelected(null); setActionSearch('');
+  };
 
   const actions = useMemo(() => {
     const list = view.legalActions.filter(a => !selected || a.cardId === selected || a.targetId === selected || a.cardIds?.includes(selected) || a.targetIds?.includes(selected) || (!a.cardId && !a.targetId && !a.cardIds?.length && !a.targetIds?.length && a.type !== 'choose'));
@@ -166,6 +179,14 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
           {onToggleHints && <button type="button" className="link-btn" onClick={onToggleHints} aria-pressed={hints}>{hints ? 'Fewer hints' : 'More hints'}</button>}
           <button type="button" className="narrow-only" aria-expanded={sheet} onClick={() => setSheet(s => !s)}>{sheet ? 'Hide' : 'Show'}</button>
         </div>
+        {suggested.length > 0 && <section className="fc-suggestions" aria-label="Suggested Moves">
+          <h3>Suggested Moves</h3>
+          <p className="muted small">{view.legalActions.length <= 2 ? 'These are the available legal choices for this decision.' : 'Advice from your visible cards and public board. Every legal choice remains below.'}</p>
+          <ol>{suggested.map(move => <li key={move.key}>
+            <button type="button" className="action-btn suggested-action" disabled={busy} onClick={() => execute(move.key)} aria-label={`Suggested move ${move.rank}: ${move.label}`}><span>{move.rank}. {move.label}</span><small>{move.explanation}</small></button>
+          </li>)}</ol>
+        </section>}
+        {myDecision && <h3 className="fc-possible-heading">Possible Moves</h3>}
         {selected && <div className="chip-row"><button type="button" className="chip" onClick={() => setSelected(null)}>Filtering by {cardName(visibleCards.find(c => c.id === selected) ?? {})} ×</button>
           {handIds.has(selected) && <button type="button" className="chip" onClick={showWhy}>Why can / can’t I?</button>}
           <button type="button" className="chip" onClick={() => { const c = visibleCards.find(x => x.id === selected); if (c) { setInspect(c); onInspectCard?.(); } }}>Inspect</button></div>}
@@ -174,7 +195,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
         {full && myDecision && <label className="small">Find a legal action<input type="search" value={actionSearch} onChange={e => setActionSearch(e.target.value)} placeholder="Card, mode or target…" /></label>}
         <div className="fc-actions">
           {actions.map((a, i) => (
-            <button type="button" title={explainAction(a)} key={`${a.type}|${a.cardId}|${a.targetId}|${a.mode}|${i}`} className={`action-btn action-${a.type}`} disabled={busy} onClick={() => { onAction(a); setSelected(null); setActionSearch(''); }}>
+            <button type="button" title={explainAction(a)} key={`${actionKey(a)}|${i}`} className={`action-btn action-${a.type}`} disabled={busy} onClick={() => execute(actionKey(a))}>
               <span>{a.label}</span>{hints && RULES[a.ruleRef] && <small>{RULES[a.ruleRef]!.ref}</small>}
             </button>
           ))}

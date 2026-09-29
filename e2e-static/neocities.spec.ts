@@ -49,7 +49,12 @@ test('static subdirectory: no network service calls, local persistence, lesson a
   await expect(page.locator('.hand-tray .card')).toHaveCount(1);
   await page.reload();
   await expect(page.locator('.hand-tray .card')).toHaveCount(1);
+  await page.goto(url + '/tabletop/#/practice/first-contact');
+  await expect(page.getByRole('region', { name: 'Suggested Moves' })).toBeVisible();
+  await expect(page.locator('.fc-actions button').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Room chat/ })).toHaveCount(0);
   await page.goto(url + '/tabletop/#/learn/orientation');
+  await expect(page.getByRole('region', { name: 'Suggested Moves' })).toHaveCount(0);
   await page.locator('[data-zone="gy"] .zone-pick').click();
   await expect(page.locator('.lesson-feedback')).toContainText('Not quite');
   for (const zone of ['hand', 'dp', 'pr', 'er', 'gy']) await page.locator(`.is-mine [data-zone="${zone}"] .zone-pick, .fc-center [data-zone="${zone}"] .zone-pick, .fc-hand[data-zone="${zone}"] .zone-pick`).first().click();

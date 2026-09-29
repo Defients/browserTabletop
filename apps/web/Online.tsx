@@ -7,6 +7,8 @@ import { Modal, Spinner, download, loadLocal, navigate, saveLocal } from './comm
 import { allTemplates } from './Library.js';
 import TableBoard from './TableBoard.js';
 import GameBoard from './GameBoard.js';
+import ChatPanel from './ChatPanel.js';
+import Notifications from './Notifications.js';
 
 const NICK = 'tabletop.nickname';
 const inviteLink = (token: string) => `${location.origin}${location.pathname}#/join/${token}`;
@@ -122,7 +124,7 @@ export function RoomLoader({ id }: { id: string }) {
 const STATUS: Record<SaveStatus, string> = { saved: 'Saved', pending: 'Saving…', disconnected: 'Disconnected — reconnecting', failed: 'Not saved' };
 
 function RoomScreen({ initial }: { initial: RoomView }) {
-  const { view, status, error, ended, command, presence, clearError } = useRoom(initial);
+  const { view, status, error, ended, connected, social, sendChat, retryChat, command, presence, clearError } = useRoom(initial);
   const [template, setTemplate] = useState<TableTemplate | null>(null);
   const [panel, setPanel] = useState<null | 'invite' | 'people' | 'menu' | 'reset' | 'recovery'>(() => (sessionStorage.getItem(`tabletop.fresh.${initial.id}`) ? 'invite' : null));
   const [invites, setInvites] = useState<InvitesResponse | null>(null);
@@ -147,11 +149,13 @@ function RoomScreen({ initial }: { initial: RoomView }) {
           {host && <button type="button" className="primary" onClick={() => setPanel('invite')}>Invite</button>}
           <button type="button" onClick={() => setPanel('people')}>People ({view.participants.length})</button>
           <button type="button" onClick={() => setPanel('menu')}>Table menu</button>
+          <ChatPanel view={view} social={social} sendChat={sendChat} retryChat={retryChat} connected={connected} />
         </div>
       </header>
       {error && <div className="toast" role="alert"><span>{error}</span><button type="button" className="icon-btn" aria-label="Dismiss" onClick={clearError}>×</button></div>}
+      <Notifications social={social} participants={view.participants} />
       {view.profile === 'intrilex-core' && <p className="notice small">Core sandbox: setup was automatic; everything after is manual. Scores, markers and legality are maintained by the players — nothing here adjudicates Core rules. <a href="#/rules">Rule reference</a></p>}
-      {view.game && <GameBoard view={view.game} onAction={a => command({ type: 'game', action: { type: a.type, cardId: a.cardId, targetId: a.targetId, cardIds: a.cardIds, targetIds: a.targetIds, mode: a.mode } })} busy={status === 'pending'}
+      {view.game && <GameBoard view={view.game} onAction={a => command({ type: 'game', action: { type: a.type, cardId: a.cardId, targetId: a.targetId, cardIds: a.cardIds, targetIds: a.targetIds, mode: a.mode } })} busy={!connected || status === 'pending'}
         names={[names(0), names(1)]} hints={hints} onToggleHints={() => { setHints(!hints); saveLocal('tabletop.hints', !hints); }} presence={presence} participants={view.participants} />}
       {view.table && <TableBoard view={view.table} seat={view.you.seat} host={host} art={art} onCommand={action => command({ type: 'table', action })} participants={view.participants} presence={presence}
         canUndo={view.canUndo} onUndo={() => command({ type: 'undo' })} readOnly={view.you.readOnly} />}

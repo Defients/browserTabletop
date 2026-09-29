@@ -1,6 +1,13 @@
 {
   "source": { "title": "INTRILEX — Complete Player Rulebook v4.3.1", "sha256": "1CFBD837F763FC436F4317B9164B802F1EA8FF57E18060FD436D8608E9F0BCF8", "readInFull": true },
   "statusVocabulary": ["VERIFIED", "UNVERIFIED", "BLOCKED", "OUT_OF_SCOPE"],
+  "playerAssistanceAndSocial": {
+    "scope": "Player UI and ephemeral room services; does not certify additional Intrilex rules",
+    "suggestions": { "profiles": ["intrilex-first-contact", "intrilex-full"], "localFirstContact": true, "lessons": false, "manualTables": false, "projectedViewsOnly": true, "maxResults": 2, "evidence": ["suggestions.test.ts", "actionIdentity.test.ts", "actionIdentity.server.test.ts", "e2e/social.spec.ts"] },
+    "chat": { "onlineProfiles": ["free", "intrilex-core", "intrilex-first-contact", "intrilex-full"], "durable": false, "historyEntries": 100, "idleMinutes": 60, "requestCacheEntries": 200, "retryMinutes": 10, "singleProcess": true, "readOnlySend": false, "evidence": ["social-protocol.test.ts", "social-server.test.ts", "room-social.test.ts", "e2e/social.spec.ts"] },
+    "notifications": { "privateDecisions": true, "postCommitOnly": true, "nativePermissions": false, "sound": false, "evidence": ["social-server.test.ts", "room-social.test.ts", "e2e/social.spec.ts"] },
+    "validationRecord": "STATUS.md"
+  },
   "legend": {
     "enumeration": "availableActions offers the play exactly when legal",
     "resolution": "applyGame/resolve implements the outcome",

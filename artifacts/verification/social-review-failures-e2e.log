@@ -1,0 +1,160 @@
+
+> browser-tabletop@1.0.0 test:e2e
+> npm run build && playwright test
+
+
+> browser-tabletop@1.0.0 build
+> npm run typecheck && vite build && esbuild apps/server/index.ts apps/server/backup.ts apps/server/restore.ts --bundle --platform=node --format=esm --packages=external --outdir=dist/server
+
+
+> browser-tabletop@1.0.0 typecheck
+> tsc --noEmit
+
+vite v8.3.1 building client environment for production...
+transforming...
+✓ 44 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/index.html                   0.60 kB │ gzip:   0.39 kB
+dist/client/assets/index-C_U7_kXW.css   34.99 kB │ gzip:   8.87 kB
+dist/client/assets/index-9dmWyJfL.js   466.71 kB │ gzip: 141.84 kB
+
+✓ built in 229ms
+
+  dist\server\index.js    189.9kb
+  dist\server\restore.js    1.5kb
+  dist\server\backup.js     1.2kb
+
+Done in 47ms
+
+Running 38 tests using 1 worker
+
+(node:33572) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium] › e2e\full.spec.ts:6:1 › Full table preserves public/private zones through play, reconnect and reset on mobile (7.1s)
+  ok  2 [chromium] › e2e\learn.spec.ts:12:1 › all lessons complete through real interactions, reject wrong moves, and persist progress (4.5s)
+  ok  3 [chromium] › e2e\learn.spec.ts:85:1 › a complete First Contact practice game against the local opponent, using only offered legal actions (7.8s)
+  ok  4 [chromium] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 1440×900 (4.2s)
+  ok  5 [chromium] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 1024×768 (4.0s)
+  ok  6 [chromium] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 390×844 (3.5s)
+  ok  7 [chromium] › e2e\quality.spec.ts:59:1 › keyboard-only: create a table, open and close dialogs with focus restored, play an action (899ms)
+  ok  8 [chromium] › e2e\quality.spec.ts:96:1 › reduced motion is honoured (396ms)
+  ok  9 [chromium] › e2e\quality.spec.ts:105:1 › performance: 8 seats and 108 cards; remote cursors do not re-render the durable board (3.4s)
+  ok 10 [chromium] › e2e\social.spec.ts:30:1 › real room social journey: unread, identity mention, reply, literal HTML, local mute, rules, read-only and reconnect (4.4s)
+  ok 11 [chromium] › e2e\social.spec.ts:68:1 › suggested move uses current exact legal action over HTTP; pending and disconnected execution are disabled (1.6s)
+  ok 12 [chromium] › e2e\social.spec.ts:91:1 › scroll position, unread watermark and same-epoch reconnect survive live chat; rejected draft retries explicitly (13.8s)
+  ok 13 [chromium] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 1440×900 (2.1s)
+  ok 14 [chromium] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 1024×768 (2.0s)
+  ok 15 [chromium] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 390×844 (1.7s)
+  x  16 [chromium] › e2e\social.spec.ts:137:1 › Full offers projected Start suggestions and live chat; Core keeps chat with manual actions only (11.7s)
+(node:41464) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 17 [chromium] › e2e\templates.spec.ts:9:1 › author a template in the editor, export it, re-import it, play it online with two browsers, export without live state (2.9s)
+  ok 18 [chromium] › e2e\templates.spec.ts:93:1 › malformed and oversized imports fail with useful messages and change nothing (812ms)
+  ok 19 [chromium] › e2e\walkthrough.spec.ts:9:1 › host, guest and spectator play First Contact across isolated browsers with restart recovery (7.1s)
+(node:50056) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 20 [firefox] › e2e\full.spec.ts:6:1 › Full table preserves public/private zones through play, reconnect and reset on mobile (10.6s)
+  ok 21 [firefox] › e2e\learn.spec.ts:12:1 › all lessons complete through real interactions, reject wrong moves, and persist progress (5.4s)
+  ok 22 [firefox] › e2e\learn.spec.ts:85:1 › a complete First Contact practice game against the local opponent, using only offered legal actions (5.4s)
+  ok 23 [firefox] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 1440×900 (6.0s)
+  ok 24 [firefox] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 1024×768 (5.6s)
+  ok 25 [firefox] › e2e\quality.spec.ts:30:3 › layout and automated accessibility at 390×844 (5.6s)
+  ok 26 [firefox] › e2e\quality.spec.ts:59:1 › keyboard-only: create a table, open and close dialogs with focus restored, play an action (1.9s)
+  ok 27 [firefox] › e2e\quality.spec.ts:96:1 › reduced motion is honoured (1.7s)
+  x  28 [firefox] › e2e\quality.spec.ts:105:1 › performance: 8 seats and 108 cards; remote cursors do not re-render the durable board (12.6s)
+(node:48248) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 29 [firefox] › e2e\social.spec.ts:30:1 › real room social journey: unread, identity mention, reply, literal HTML, local mute, rules, read-only and reconnect (8.5s)
+  ok 30 [firefox] › e2e\social.spec.ts:68:1 › suggested move uses current exact legal action over HTTP; pending and disconnected execution are disabled (2.6s)
+  ok 31 [firefox] › e2e\social.spec.ts:91:1 › scroll position, unread watermark and same-epoch reconnect survive live chat; rejected draft retries explicitly (15.2s)
+  ok 32 [firefox] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 1440×900 (3.4s)
+  ok 33 [firefox] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 1024×768 (3.1s)
+  ok 34 [firefox] › e2e\social.spec.ts:118:3 › chat keyboard, IME, focus and accessibility coexist with board at 390×844 (4.0s)
+  ok 35 [firefox] › e2e\social.spec.ts:137:1 › Full offers projected Start suggestions and live chat; Core keeps chat with manual actions only (4.3s)
+  ok 36 [firefox] › e2e\templates.spec.ts:9:1 › author a template in the editor, export it, re-import it, play it online with two browsers, export without live state (3.7s)
+  ok 37 [firefox] › e2e\templates.spec.ts:93:1 › malformed and oversized imports fail with useful messages and change nothing (864ms)
+  ok 38 [firefox] › e2e\walkthrough.spec.ts:9:1 › host, guest and spectator play First Contact across isolated browsers with restart recovery (10.2s)
+
+
+  1) [chromium] › e2e\social.spec.ts:137:1 › Full offers projected Start suggestions and live chat; Core keeps chat with manual actions only 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('.suggested-action').first()
+    Expected pattern: /Start Phase|hidden card/
+    Received string:  "1. 2♥ · Quick: score 2, opponent discards 1Adds 2 Points without spending a Mini-Turn; the opponent chooses a discard, if it resolves. It can be answered; victory checks at End (§26 Two)."
+    Timeout: 10000ms
+
+    Call log:
+      - Expect "toContainText" locator('.suggested-action').first() with timeout 10000ms
+      - waiting for locator('.suggested-action').first()
+        24 × locator resolved to <button type="button" class="action-btn suggested-action" aria-label="Suggested move 1: 2♥ · Quick: score 2, opponent discards 1">…</button>
+           - unexpected value "1. 2♥ · Quick: score 2, opponent discards 1Adds 2 Points without spending a Mini-Turn; the opponent chooses a discard, if it resolves. It can be answered; victory checks at End (§26 Two)."
+
+
+      144 |         const actor = view.game.activePlayer === view.you.seat ? host! : guest!;
+      145 |         await expect(actor.getByRole('region', { name: 'Suggested Moves' })).toBeVisible();
+    > 146 |         await expect(actor.locator('.suggested-action').first()).toContainText(/Start Phase|hidden card/);
+          |                                                                  ^
+      147 |         await expect(actor.locator('.fc-actions button').first()).toBeVisible();
+      148 |       } else {
+      149 |         await expect(host!.getByRole('region', { name: 'Suggested Moves' })).toHaveCount(0);
+        at D:\CodexProjects\browser-tabletop\e2e\social.spec.ts:146:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\social-Full-offers-project-d27ca-at-with-manual-actions-only-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\social-Full-offers-project-d27ca-at-with-manual-actions-only-chromium\test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\social-Full-offers-project-d27ca-at-with-manual-actions-only-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\social-Full-offers-project-d27ca-at-with-manual-actions-only-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\social-Full-offers-project-d27ca-at-with-manual-actions-only-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [firefox] › e2e\quality.spec.ts:105:1 › performance: 8 seats and 108 cards; remote cursors do not re-render the durable board 
+
+    Error: expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "left: 50px; top: 60px; transform: rotate(0deg);"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      148 |     const s = Date.now();
+      149 |     await page.keyboard.press(i % 2 ? 'ArrowUp' : 'ArrowDown');
+    > 150 |     await expect.poll(async () => moving.getAttribute('style')).not.toBe(before);
+          |                                                                     ^
+      151 |     samples.push(Date.now() - s);
+      152 |   }
+      153 |   guests.forEach(g => g.close());
+        at D:\CodexProjects\browser-tabletop\e2e\quality.spec.ts:150:69
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\quality-performance-8-seat-292cf-re-render-the-durable-board-firefox\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\quality-performance-8-seat-292cf-re-render-the-durable-board-firefox\error-context.md
+
+    Error Context: test-results\quality-performance-8-seat-292cf-re-render-the-durable-board-firefox\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\quality-performance-8-seat-292cf-re-render-the-durable-board-firefox\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\quality-performance-8-seat-292cf-re-render-the-durable-board-firefox\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [chromium] › e2e\social.spec.ts:137:1 › Full offers projected Start suggestions and live chat; Core keeps chat with manual actions only 
+    [firefox] › e2e\quality.spec.ts:105:1 › performance: 8 seats and 108 cards; remote cursors do not re-render the durable board 
+  36 passed (3.4m)

@@ -107,7 +107,12 @@ test('performance: 8 seats and 108 cards; remote cursors do not re-render the du
   const cards = [...base.cards, ...base.cards.map(c => ({ ...c, id: `b-${c.id}` }))];
   const template = { ...structuredClone(base), id: 'perf-108', title: 'Perf 108', cards, decks: [{ id: 'd', zone: 'deck', cards: cards.map(c => c.id) }], setup: [{ op: 'shuffle', zone: 'deck' }, { op: 'place', zone: 'deck', target: 'table', count: 60, faceUp: true }] };
   await page.setViewportSize({ width: 1440, height: 900 });
+  // Finish the home page's session bootstrap before the fixture's direct fetch.
+  // Otherwise two cookie-less /api/session calls can create different sessions,
+  // leaving the application's cached CSRF token paired with the fixture's cookie.
+  const homeReady = page.waitForResponse(r => r.url() === backend.url + '/api/rooms' && r.request().method() === 'GET' && r.status() === 200);
   await page.goto(backend.url + '/#/');
+  await homeReady;
   const room = await page.evaluate(async t => {
     const { csrf } = await (await fetch('/api/session')).json();
     const r = await fetch('/api/rooms', { method: 'POST', headers: { 'content-type': 'application/json', 'x-csrf-token': csrf }, body: JSON.stringify({ nickname: 'Host', template: t }) });

@@ -1,5 +1,25 @@
 # Status
 
+## CosmoTech™ visual system — September 29, 2026
+
+Replaced the felt-green presentation with a complete CosmoTech™ skin: void-first environment, smoked-glass surfaces, violet/cyan signal energy. All styling lives in `apps/web/styles.css` (rewritten as `--ct-*` design tokens with legacy variable aliases); `apps/web/App.tsx` adds the `aria-hidden` `.ct-env` ambient layer (drifting star field, two rotating orbital ring systems, all CSS); `apps/web/index.html` theme-color updated to `#04060d`. Every existing class hook was preserved — no JSX class names, routes, state or logic changed.
+
+Details: instrument buttons with hover energy traces and luminous violet primary; console inputs with cyan focus acquisition; custom range-slider track/thumb; glass topbar with bottom energy hairline and rotating brand-mark arc; status node on `.service-dot` (teal pulse); concentric orbital loader replaces the spinner dot; card backs became indigo constellation marks; First Contact surface is now a nebular void deck with edge-masked technical grid; action buttons keep left-edge semantics remapped to the energy spectrum; modals/notices/chat dock are elevated glass with atmospheric backdrop; room-notice left edge is kind-coded; thin dark scrollbars; `prefers-reduced-motion` still collapses all animation.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| Node tests | PASS — 193/193 |
+| `npm run build` | PASS |
+| `npm run build:neocities` | PASS |
+| Playwright e2e (Chromium + Firefox) | PASS — 38/38, incl. axe WCAG2A/AA at 1440/1024/390, keyboard-only journey, reduced-motion, perf |
+| Visual inspection | `scripts/shots.ts` at 1440×900 and 390×844 + e2e `artifacts/screens/*` — no console errors, no legacy-theme remnants |
+
+Note: two transient infrastructure flakes occurred on the first e2e run (Playwright trace-write ENOENT on context close; screenshot write to `artifacts/screens/` blocked while the IDE had the folder open). Both passed on retry. No public deployment or push occurred; the working tree was committed externally during the session under the repo owner's identity.
+
 ## Goal +5 report investigation; Seven-family and cost-commit fixes — September 29, 2026
 
 Investigated the user-reported "9♥ Goal Shift +5 raised the opponent Goal by 8" claim. A lone `goal5` adds exactly +5 (verified by test and direct fixture); the observed +8 was reproduced only by two separate Nine declarations (`goal5` then `goal3` in the same response window) resolving LIFO — legal per §6/§7, and both declarations appear in history. A Full-profile rules fuzz then exposed three real defects, all fixed:

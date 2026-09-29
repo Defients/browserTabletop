@@ -69,11 +69,16 @@ export function createServer(options: ServerOptions) {
   };
 
   const allowedOrigin = (req: IncomingMessage) => options.origin ?? `http://${req.headers.host}`;
+  const rawCookie = (req: IncomingMessage) => req.headers.cookie?.split(';').map(x => x.trim()).find(x => x.startsWith('tabletop_session='))?.slice(17);
+  const setCookie = (res: ServerResponse, secret: string) => res.setHeader('set-cookie', `tabletop_session=${secret}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${ROOM_TTL / 1000}${options.secureCookies ? '; Secure' : ''}`);
   const sessionOf = (req: IncomingMessage): Session | undefined => {
-    const raw = req.headers.cookie?.split(';').map(x => x.trim()).find(x => x.startsWith('tabletop_session='))?.slice(17);
+    const raw = rawCookie(req);
     if (!raw || !TOKEN_RE.test(raw)) return undefined;
     const s = store.getSession(sha(raw));
-    return s && s.expires > now() ? s : undefined;
+    if (!s || s.expires <= now()) return undefined;
+    // Sliding expiry: a session stays valid for 30 days after its last use (refreshed at most daily).
+    if (s.expires - now() < ROOM_TTL - DAY) { s.expires = now() + ROOM_TTL; store.putSession(sha(raw), s); }
+    return s;
   };
   const rate = (key: string, limit: number, period = 60_000) => {
     const r = rates.get(key);
@@ -129,8 +134,8 @@ export function createServer(options: ServerOptions) {
           const secret = token();
           session = { id: token(), csrf: token(), expires: now() + ROOM_TTL };
           store.putSession(sha(secret), session);
-          res.setHeader('set-cookie', `tabletop_session=${secret}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${ROOM_TTL / 1000}${options.secureCookies ? '; Secure' : ''}`);
-        }
+          setCookie(res, secret);
+        } else setCookie(res, rawCookie(req)!); // keep the browser cookie in step with the sliding server expiry
         json(res, 200, { csrf: session.csrf }); return;
       }
       requireThat(session, 401, 'SESSION_REQUIRED');
@@ -232,10 +237,12 @@ export function createServer(options: ServerOptions) {
       const fingerprint = sha(JSON.stringify(command));
       const receipt = store.receipt(room.id, p.id, b.requestId as string);
       if (receipt) { requireThat(receipt.fingerprint === fingerprint, 409, 'REQUEST_ID_REUSED'); json(res, 200, { view: view(room, p), duplicate: true }); return; }
+      // Authorization is decided before freshness, so refusals never depend on timing.
+      if ((HOST_COMMANDS as readonly string[]).includes(command.type)) requireThat(room.host === p.id, 403, 'HOST_REQUIRED');
+      if (command.type === 'table' || command.type === 'game') requireThat(p.seat !== null, 403, 'SEAT_REQUIRED');
       const stale = b.revision !== room.revision;
       if (stale && !staleTolerant(command)) { json(res, 409, { error: 'STALE_REVISION', view: view(room, p) }); return; }
       requireThat(room.revision < 100_000, 409, 'ROOM_COMMAND_LIMIT');
-      if ((HOST_COMMANDS as readonly string[]).includes(command.type)) requireThat(room.host === p.id, 403, 'HOST_REQUIRED');
       const next = structuredClone(room);
       const actor = next.participants.find(x => x.id === p.id)!;
       const message = applyCommand(next, actor, command, { random: secureRandom, token });

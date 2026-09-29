@@ -44,7 +44,7 @@ button[aria-pressed="true"] { background: #3a5a2c; border-color: #8ec070; }
 .primary:hover:not(:disabled) { background: #ffc657 !important; }
 .danger { border-color: #a4524c; color: #ffd9d4; }
 .danger:hover:not(:disabled) { background: #4a2522; }
-.link-btn { background: none; border: none; color: var(--accent); padding: .2rem .4rem; min-height: 0; text-decoration: underline; text-underline-offset: 3px; }
+.link-btn, .link-btn[aria-pressed], .link-btn:hover:not(:disabled) { background: none; border: none; color: var(--accent); padding: .2rem .4rem; min-height: 0; text-decoration: underline; text-underline-offset: 3px; }
 .icon-btn { background: none; border: 1px solid transparent; font-size: 1.4rem; line-height: 1; padding: .1rem .5rem; min-height: 0; }
 .button-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .button-column { display: flex; flex-direction: column; gap: .5rem; align-items: stretch; }

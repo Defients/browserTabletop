@@ -1,31 +1,30 @@
 # Status
 
-## Continuation baseline — 2026-09-27
+## Current state — 2026-09-28
 
-Checkout HEAD: `dbc525a5f53d45dbe82c75ad723829fd8f9aa417` ("Initial commit"), clean tree. Matches the audited SHA.
+Base: `518b4ca` (user commit of in-progress work) + uncommitted working tree described below. Nothing pushed; **not publicly deployed**.
 
-Environment: system Node v22.14.0, npm 10.9.2. npm scripts run under the project-local Node v24.21.0 supplied by the `node` devDependency (npm uses cmd.exe on Windows, so `node_modules/.bin/node.cmd` resolves first).
+The inherited tree (`dbc525a`) did not compile: empty `packages/tabletop/index.ts`, missing `App.tsx`/`styles.css`/`lessons.ts`, no tests, no Playwright config, mismatched pointer protocol, stable face-encoding card IDs. All closed:
 
-Rulebook `sources/INTRILEX_v4.3.1_COMPLETE_PLAYER_RULEBOOK.md` SHA-256 `1CFBD837F763FC436F4317B9164B802F1EA8FF57E18060FD436D8608E9F0BCF8` — verified exact. Read in full (Parts I–X, 4299 lines) before engine work.
+- `packages/tabletop` — generic engine: discriminated `TableCommand`, permission-aware immutable application, invariants, rotating opaque handles, projections, undo policy.
+- `packages/templates` — strengthened schema (zone/visibility rules, setup allow-list incl. random first seat, raster byte checks, limits, inert import).
+- `packages/intrilex` — First Contact engine restructured and corrected against the full v4.3.1 book (see source map D-1…D-13), rule IDs, fixtures, 7 lessons, own-view legal-only bot.
+- `packages/protocol` — one shared wire contract (fixes pointer mismatch).
+- `apps/server` — store with migrations (v2), hashed invite index, membership, recovery codes, sliding sessions, authorization-before-freshness, rebase policy, JSON logs without secrets, per-participant snapshots, graceful shutdown, bundled backup/restore.
+- `apps/web` — full application: home, create/join/recover, rooms with host controls and save state, free-table board (pan/zoom/drag/keyboard/menus), First Contact board, local practice, lessons, template library/editor, rules reference, presence.
+- Tests: 115 Node tests, 22 Playwright tests (Chromium + Firefox). Docs, Dockerfile/compose, NOTICE.
 
-### Baseline gate results (unmodified inherited tree)
+### Environment
+Windows, system Node 22.14.0 / npm 10.9.2; npm scripts run on project-local Node 24.21.0. Playwright 1.63 with Chromium 153 and Firefox 155. Docker not installed (container config unverified).
 
-| Command | Result |
-|---|---|
-| `npm ci` | OK — 166 packages, 0 vulnerabilities |
-| `npm run typecheck` | FAIL — `apps/web/TableBoard.tsx(10,820) TS1005` parse error (masks missing-module errors) |
-| `npm run lint` | FAIL — 3 errors (TableBoard parse error, `no-control-regex` in server, `prefer-const` in intrilex) |
-| `npm test` | Runs 0 tests — `tests/` empty |
-| `npm run build` | FAIL — typecheck step fails |
-| `npm run test:e2e` | Not runnable — no `playwright.config.ts` |
+### Final release gates (isolated clean copy of the final tree)
 
-### Verified forensic findings
+RESULTS_PLACEHOLDER
 
-- `packages/tabletop/index.ts` is 0 bytes; server imports `createTable/applyTable/projectTable` from it.
-- `apps/web/App.tsx`, `apps/web/styles.css` missing; `main.tsx` imports both.
-- `packages/intrilex/lessons.ts` missing; `index.ts` re-exports six symbols from it.
-- `tests/`, `playwright.config.ts`, `packages/protocol/`, `scripts/`, `apps/web/src/` exist only as empty directories.
-- Pointer protocol mismatch confirmed: server sends `participantId`, client reads `data.id`.
-- Intrilex game cards use face-encoding stable IDs (`c-A-♣`); table cards use canonical template IDs in projections.
+### Open items
+- **Rules rulings requested** (outcome-changing, implemented conservatively): D-1 enabled-effect list reading; D-3 2 Solo Wild disabled.
+- **UNVERIFIED**: container build/run (no Docker here); WebKit/Safari and real mobile devices.
+- **Decisions for Deffy**: platform licence; distribution rights for Intrilex material; commit/push of this working tree.
 
-Work in progress below is updated at each milestone.
+### Next action
+Review, commit the working tree, and (if desired) build the container on a Docker host: `docker compose up --build`.

@@ -1,4 +1,4 @@
-import { DatabaseSync, backup } from 'node:sqlite';
+import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { SCHEMA_VERSION } from './store.js';
@@ -15,6 +15,6 @@ try {
   const version = (db.prepare('SELECT MAX(version) AS version FROM migrations').get() as { version: number | null }).version ?? 0;
   if (version < 1 || version > SCHEMA_VERSION) throw new Error(`Unsupported backup schema ${version}; this build supports 1–${SCHEMA_VERSION} (older schemas migrate on start).`);
   mkdirSync(dirname(destination), { recursive: true });
-  await backup(db, destination);
+  db.prepare('VACUUM INTO ?').run(destination);
   console.log(`Restored private database (schema ${version}) to ${destination}. Start the server with DATA_PATH set to this file.`);
 } finally { db.close(); }

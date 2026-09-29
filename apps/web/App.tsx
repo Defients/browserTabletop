@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { serviceAvailable } from './api.js';
 import Home from './Home.js';
 import { CreateRoom, JoinRoom, RecoverRoom, RoomLoader } from './Online.js';
@@ -26,8 +26,13 @@ export default function App() {
   useEffect(() => { let live = true; void serviceAvailable().then(ok => { if (live) setOnline(ok); }); return () => { live = false; }; }, []);
   const [page, a, b] = route;
 
-  // Move focus to the main heading on navigation so keyboard and screen-reader users land in context.
-  useEffect(() => { const h = document.querySelector<HTMLElement>('main h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }, [page, a]);
+  // After in-app navigation (not the first load), move focus to the main heading so keyboard and
+  // screen-reader users land in context; the first load keeps the natural order starting at the skip link.
+  const navigated = useRef(false);
+  useEffect(() => {
+    if (!navigated.current) { navigated.current = true; return; }
+    const h = document.querySelector<HTMLElement>('main h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
+  }, [page, a]);
 
   let content;
   switch (page) {

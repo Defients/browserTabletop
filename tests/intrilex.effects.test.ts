@@ -94,7 +94,8 @@ test('6.dig §26 ⦗6⦘: draw 3 then return one to top/bottom, or keep all and 
 });
 
 test('7.base §26 ⦗7⦘: take one revealed card, play the other as a generated play (no Mini-Turn); the 7 waits for its child', () => {
-  let s = fixture({ hands: [['7♠', '10♦'], NO], pr: [[], ['9♣']], deckTop: ['K♦', '3♦'] });
+  // Player 2 holds an Ace, so every Effect (including the generated child) pauses for a response.
+  let s = fixture({ hands: [['7♠', '10♦'], ['A♥', ...NO5]], pr: [[], ['9♣']], deckTop: ['K♦', '3♦'] });
   s = passAll(effect(s, 0, '7♠', 'seven'));
   assert.equal(s.choice?.kind, 'seven-hand');
   assert.equal(projectGame(s, 1).choice!.cards.length, 2, 'revealed publicly');
@@ -202,6 +203,17 @@ test('J.attach fizzle §6: a target that becomes Guarded before resolution makes
   assert.ok(s.events.some(e => e.t === 'fizzle' && e.mode === 'attach'));
 });
 
+test('A.purge §26 ⦗A⦘ (mode 2, no Aegis in First Contact): bounce a Vulnerable enemy Anchor to its owner\u2019s hand; Guard protects other Anchors', () => {
+  let s = fixture({ hands: [['A♦', '10♦'], NO], er: [[], ['K♣', 'Q♥']] });
+  const targets = legal(s, 0).filter(a => a.mode === 'purge').map(a => a.targetId);
+  assert.deepEqual(targets, [id(s, 'Q♥')], 'the Guarded King is protected; the Queen is not protected by itself');
+  s = passAll(effect(s, 0, 'A♦', 'purge', 'Q♥'));
+  assert.equal(zoneOf(s, 'Q♥'), 'hand-1');
+  assert.equal(zoneOf(s, 'A♦'), 'gy');
+  s = fixture({ hands: [['A♦', '10♦'], NO], pr: [[], ['9♣']], er: [[], [{ card: 'J♠', host: '9♣' }]] });
+  assert.ok(!legal(s, 0).some(a => a.mode === 'purge'), 'Attachments are not Anchors');
+});
+
 test('K.anchor / Q.anchor §26: Anchors enter ER; Queen establishes Guard', () => {
   let s = fixture({ hands: [['Q♦', '10♦'], NO] });
   s = passAll(effect(s, 0, 'Q♦', 'anchor-Q'));
@@ -229,7 +241,7 @@ test('RJ.modes §26 ⦗RJ⦘: Hand Swap, Self Reset (+3), Opponent Attack (−2)
 });
 
 test('BJ.lock §26 ⦗BJ⦘: free Quick in an open state; forbids non-counter Effects and Scuttle; counters, Draw and scoring remain', () => {
-  let s = fixture({ hands: [['BJ', '6♦', '10♦'], ['3♦', '9♥', 'A♥', ...NO.slice(0, 3)]], pr: [['4♠'], ['8♦', '7♣']] });
+  let s = fixture({ hands: [['BJ', '6♦', '10♦'], ['3♦', '9♥', 'A♥', ...NO.slice(0, 3)]], pr: [['4♠'], ['8♦', '3♣']] });
   s = effect(s, 0, 'BJ', 'board-lock');
   s = passAll(s);
   assert.ok(s.boardLock); assert.equal(s.miniTurns, 1, 'no Mini-Turn spent');

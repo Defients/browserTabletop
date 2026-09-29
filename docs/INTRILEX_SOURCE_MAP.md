@@ -1,0 +1,78 @@
+# Intrilex source map
+
+## Edition
+
+| Field | Value |
+|---|---|
+| Source | `sources/INTRILEX_v4.3.1_COMPLETE_PLAYER_RULEBOOK.md` (supplied by Deffy) |
+| Edition | Complete Player Rulebook v4.3.1 (v4.0 contract + v4.1 clarifications, v4.1.1, v4.1.2, v4.2.0, v4.3.0, v4.3.1 hotfixes) |
+| SHA-256 | `1CFBD837F763FC436F4317B9164B802F1EA8FF57E18060FD436D8608E9F0BCF8` — verified 2026-09-27 |
+| Read | In full, Parts I–X (4 299 lines), before engine work |
+| Authority order | Deffy's explicit rulings → this rulebook → tested implementation → prose summaries (`packages/intrilex/rules.ts` summaries are original wording, not rulebook text) |
+
+Machine-readable capability matrix: [`docs/capabilities.json`](capabilities.json). Rule IDs used by the engine, UI and tests: [`packages/intrilex/rules.ts`](../packages/intrilex/rules.ts).
+
+## Headings traced for First Contact
+
+Part VII (§27 / Canonical §15) is a profile over the larger book. Implemented behaviour traces through:
+
+| Heading | Used for | Code |
+|---|---|---|
+| §1 Objective; §4.5 End Phase | End-Phase victory for the active player only; timer order victory → Board Lock → (Sudden Death disabled) → Exhausted | `engine.ts endTurn` |
+| §2 Setup; §27 15.4 | 54 cards, random Player A (5, first), Player B (6), Goal 15, no Swap Bar/Exile | `createGame` |
+| §4.1 Start; §27 15.5 | reset per-turn limits, Exhausted entry, untap everything the active player controls | `startTurn` |
+| §4.3 Actions; §27 15.3, 15.6 | exactly one Mini-Turn: Draw (2 if hand empty *at declaration*), Play for Points, Play for Effect, Scuttle | `ordinaryActions`, `perform` |
+| §4.4 Free plays; §26 Timing Keywords | Quick = own turn; Instant = any response window | `quickModes`, `instantModes` |
+| §5 Declare/fizzle; §6 Stack; §7 Counters | declaration legality via enumeration; LIFO; revalidation → fizzle; counters don't refund | `settle`, `resolve`, `fizzle` |
+| §8 Secured PR; §9 Tapping | tapped cards score 0; Jack +1 | `score` |
+| §12 Attachments | sever/Scrap Jack; host returns to owner | `checkAttachments`, `restoreHost` |
+| §13 Guard | untapped Queen Anchor protects *other* OTT cards from enemy single-target Effects | `guarded`, `effectTargetable` |
+| §17 Vulnerable | single-target legality = no rank/state immunity + Guard (Aegis absent) | `effectTargetable` |
+| §19 Scuttle; §16.4 | rank order A…K<RJ<BJ, suit ties ♣<♦<♥<♠, A/5/RJ/BJ immune, own cards illegal | `canScuttle`, `outranks` |
+| §22 Exhausted | entry at Start, Draw undeclarable, forced Pass condition, countdown, tiebreak, recovery | `startTurn`, `endTurn`, `settle` |
+| §26 Rank codex (generic text only) | see capability matrix | `MODES`, `resolveEffect` |
+| §26 BJ Board Lock (state, restrictions, duration, pending objects) | open-state Quick, ⭐A-only counter, no non-counter Effects/Scuttle, ticks from the next completed Full Turn | `quickModes`, `endTurn` |
+| §27 15.1–15.2, 15.7 | disabled systems, Exile→GY, generic-only profile | throughout |
+| §35 precedence; §36 matrices; §38 20.3 FAQ | counter authority, automatic priority advance, Pass vs decline | `counterActions`, `settle` |
+
+Parts V (Combos, Ultras, Sudden Death, Voltage, Exile), VIII (modules) and suit-specific codex text were read and are **disabled** in First Contact (§27 15.1, §34 22.2).
+
+## Interpretation decisions
+
+Each decision is the safest reading that keeps outcomes faithful; items marked **ruling requested** change outcomes and await Deffy.
+
+| ID | Question | Decision | Reason |
+|---|---|---|---|
+| D-1 | §15.3 table says "only generic rank effects explicitly enabled below", but §15.7 introduces its list with "Examples:" and states the general rule "generic rank text remains legal only when it does not depend on a disabled system". | Apply the general rule. Enabled: Ace counter/Purge(mode 2)/Anchor, 2 Quick, 3 (all generic), 4 Clear + Natural, 5 Recycle, 6 Dig, 7 + trigger, 8 counter + bonus, 9 Tap/Goal/Anchor, J Disrupt/Attach, Q Anchor, K counter/Anchor, RJ modes, BJ score/Board Lock. **Ruling requested.** | Matches Deffy's continuation brief (9 Anchor, King Anchor, "applicable counters"). |
+| D-2 | A♠ and K♠ have suit-specific replacement text; suit abilities are disabled. | A♠ and K♠ use the generic Ace/King text. | The replacement is itself suit-specific and disabled; generic rank text does not depend on a disabled system. Same reading as 3♠/4♠/6♠/7♠ using generic text. |
+| D-3 | 2 Solo Wild copies a *same-suit* rank 3–7 Base effect. | Disabled. **Ruling requested.** | §27 15.1: suits exist only "for identity and equal-rank Scuttle comparison"; the wild family's primary use (Supers) is disabled. |
+| D-4 | "Play for Points normally does not use the stack", yet J Disrupt responds to *any* Mini-Turn Action declaration. | Draw and Play-for-Points declarations wait in a response window as an uncounterable `action` object (no counter has authority over it). | Required for J Disrupt; no counter or effect gains power from it. |
+| D-5 | Tapped PR cards "have no active PR text" (§9). | Tapped A/5/RJ/BJ lose Scuttle/Jack immunity; tapped 4/8 lose Effect-target immunity. | Literal §9; tap only lasts until the controller's Start in First Contact. |
+| D-6 | "Original owner" (Attachment restoration, Purge) with one shared deck. | The player under whose control the card entered OTT. | Only meaningful owner in a shared-deck game. |
+| D-7 | Draw with an empty DP while Exhausted is *not* active (DP emptied mid-turn). | Draw remains declarable and draws nothing. | §22 10.2 forbids Draw only while Exhausted is active; otherwise the player could have no legal Action. |
+| D-8 | 3 Raid "presents up to 3" / discard "up to 2" with "as many as possible". | Opponent presents/discards min(requested, hand size), choosing which. | The "as many as possible" sentence fixes the count. |
+| D-9 | 8 Scuttle Bonus timing and GY order. | Part of the Scuttle resolution; target then source enter GY in that order, then the player takes top (the 8) or bottom. | §19 Result lists target → GY, source → GY. |
+| D-10 | Generated Topdeck plays in First Contact. | Score, or an ordinary (🛠/Anchor/Attachment) mode of that card; only a physical 7 may recurse; Quick/Instant timings are not generated. Parent 7 goes to GY only after the child play and its triggers finish. | §26 Generated/Recursive Topdeck Plays; Supers/Combos disabled; Board Lock open-state rule. |
+| D-11 | Revealed-Until-Start is disabled. | Cards taken into hand (Raid, Anchor Ace, Seven) enter hidden; public history keeps the legitimately revealed fact. | §27 15.3. |
+| D-12 | Automatic priority advance (§38 20.3) reveals that a waiting player holds a response. | Implemented as written. | Canonical v4.1.2 behaviour; noted as a rules-mandated information signal. |
+| D-13 | Jack Attachment counter class. | An Effect play (Ace-counterable); not an Anchor Play (King cannot counter). | Glossary: Anchor Play places a card "as an Anchor"; Attachments are distinct (§26 J♠ "Attachments … ineligible" as Anchors). |
+
+No outcome-changing contradiction blocks play; D-1 and D-3 are flagged for confirmation.
+
+## Lessons (canonical scenarios)
+
+| Lesson | Rule refs | Teaching constraint |
+|---|---|---|
+| orientation | §3, §27 15.4 | observation tasks only; no Actions |
+| draw-action | §27 15.3/15.6, §4.3 | learner's Action limited to Draw |
+| score-victory | §1, §4.5, §8 | Play for Points only |
+| generic-effect | §26 J, §26 4/A PR immunity, §17 | Jack Attachment only; immune targets never offered |
+| guard-scuttle | §13, §19, §16.4 | Scuttle only |
+| response-counter | §6, §7, §26 8/A | scripted opponent Eight; **teaching foreknowledge** announced |
+| board-lock | §26 BJ | Board Lock, score, end |
+
+All lessons run on the real engine from fixed positions (`packages/intrilex/lessons.ts`), are complete-by-predicate over engine events, and are covered by `tests/lessons.test.ts` and `e2e/learn.spec.ts`.
+
+## Core sandbox
+
+The Core template reproduces §2–3: random Player A (5 cards) and B (6), Swap Bar 2 face-down + 1 face-up after the hands, Goals 21, PR/ER per player, DP, GY, Exile, plus manual counters (Secured PR, Mini-Turns, Exhaust, Board Lock) and markers (Tapped, Aegis, Revealed, Exile-Bound, Jacked, Disrupted, Skip). Everything after setup is manual; the UI states this on every Core view.

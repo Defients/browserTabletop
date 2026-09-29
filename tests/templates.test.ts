@@ -46,7 +46,7 @@ test('raster validation rejects active content, links, paths and spoofed bytes',
   const svg = 'data:image/svg+xml;base64,' + btoa('<svg onload="alert(1)"/>');
   const bad = [svg, 'https://example.com/card.png', 'file:///C:/cards/a.png', '../cards/a.png', 'javascript:alert(1)',
     'data:image/png;base64,' + btoa('GIF89a' + 'x'.repeat(40)), 'data:image/jpeg;base64,' + btoa('\x89PNG\r\n\x1a\n' + 'x'.repeat(40)), 'data:image/png;base64,!!!!'];
-  for (const b of bad) assert.throws(() => validateRaster(b), undefined, b.slice(0, 40));
+  for (const b of bad) assert.throws(() => validateRaster(b), Error, b.slice(0, 40));
   const huge = 'data:image/png;base64,' + btoa('\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\x20\0\0\0\x20\0' + 'x'.repeat(40));
   assert.throws(() => validateRaster(huge), /4096/);
 });

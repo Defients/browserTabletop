@@ -173,7 +173,7 @@ export function lessonAct(s: LessonState, action: GameAction, random = seeded(90
   const out: LessonState = { ...s, game, moves: s.moves + 1 };
   out.completed = def.complete(out);
   out.feedback = out.completed ? def.success
-    : game.winner !== null || (game.activePlayer === 1 && !availableActions(game, 0).length) ? 'That line did not meet the objective. Reset and try the hinted sequence.'
+    : game.winner !== null || game.events.some(e => e.t === 'end-turn' && e.p === 0) ? 'That line did not meet the objective. Reset and try the hinted sequence.'
     : game.players[0]!.pr.length && score(game, 0) >= game.players[0]!.goal && game.winner === null ? `You have ${score(game, 0)} secured, but victory waits for your End Phase.`
     : def.objective;
   return out;

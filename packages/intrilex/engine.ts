@@ -808,7 +808,15 @@ export function explainCard(v: GameView, cardId: string): string[] {
   if (p === null || !c) return ['That card is not in your hand.'];
   const reasons: string[] = [];
   const legal = v.legalActions.filter(a => a.cardId === cardId);
-  if (legal.length) return legal.map(a => `Legal: ${a.label} (${RULES[a.ruleRef]?.ref ?? a.ruleRef}).`);
+  // Per-target Scuttle reasoning (§19): explains every enemy PR card this card cannot Scuttle.
+  const scuttleNotes = v.players[opp(p)]!.pr.filter(t => !legal.some(a => a.type === 'scuttle' && a.targetId === t.id)).map(t =>
+    scuttleImmune(t) ? `Cannot Scuttle ${cardName(t)}: untapped ${t.rank === '5' ? '5s' : t.rank === 'A' ? 'Aces' : 'Jokers'} in PR are Scuttle-immune (§16.4).`
+      : t.rank === c.rank ? `Cannot Scuttle ${cardName(t)}: equal rank, and ${c.suit} is not a higher suit than ${t.suit} (♣ < ♦ < ♥ < ♠, §19).`
+      : !outranks(c, t) ? `Cannot Scuttle ${cardName(t)}: its rank is higher than ${cardName(c)} (§19 rank order).`
+      : v.boardLock ? `Cannot Scuttle ${cardName(t)}: Board Lock forbids Scuttle.`
+      : `Scuttle ${cardName(t)} is only possible as your Action on your own turn.`);
+  if (legal.length) return [...legal.map(a => `Legal: ${a.label} (${RULES[a.ruleRef]?.ref ?? a.ruleRef}).`), ...scuttleNotes];
+  reasons.push(...scuttleNotes);
   if (v.winner !== null) return ['The game is over.'];
   if (v.choice) return [`Waiting for ${v.choice.player === p ? 'your' : 'your opponent\u2019s'} choice: ${v.choice.prompt}`];
   if (v.pending.length && v.priority !== p) reasons.push('A play is pending and your opponent has priority (§6).');
@@ -822,8 +830,6 @@ export function explainCard(v: GameView, cardId: string): string[] {
   if (c.rank === 'J' && !v.boardLock) reasons.push('Jack Attachment needs an enemy PR card that is not an untapped Ace/Joker, not an untapped 4/8, and not protected by Guard.');
   if (c.rank === '8') reasons.push('Aegis Field is disabled in First Contact (§27 15.7).');
   if (c.rank === 'BJ' && v.pending.length) reasons.push('Board Lock can only be declared while the stack is empty (§26 BJ Open-State Declaration).');
-  const enemyPR = v.players[opp(p)]!.pr;
-  if (enemyPR.length && !enemyPR.some(t => !scuttleImmune(t) && outranks(c, t))) reasons.push('No Scuttle: every enemy PR card outranks this card, ties on a higher suit, or is Scuttle-immune (untapped A, 5, Jokers).');
   return reasons.length ? reasons : ['No legal use at this moment.'];
 }
 

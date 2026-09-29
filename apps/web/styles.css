@@ -251,6 +251,7 @@ span.card { cursor: default; }
 .fc-slot { position: relative; display: inline-flex; flex-direction: column; align-items: center; }
 .fc-tag { font-size: .62rem; font-weight: 800; background: #0c1815d9; border-radius: 4px; padding: 0 .3rem; margin-top: 2px; }
 .fc-tag-jacked { background: #3a2c5a; }
+.fc-tag-tapped { background: #4a2c2c; }
 .fc-empty { color: #ffffff70; font-size: .8rem; font-style: italic; }
 .fc-center { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: .6rem; align-items: stretch; }
 .fc-pile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; background: #0000002e; border-radius: 12px; padding: .45rem .6rem; font-size: .78rem; text-align: center; min-width: 96px; }

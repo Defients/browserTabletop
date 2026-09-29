@@ -317,3 +317,61 @@ test('Full Nine Tap sets the score-release condition', () => {
   assert.ok(tapped.tapped);
   assert.equal(tapped.tapUntil, 'score');
 });
+
+test('Full §26 Six Deep Draw: the discard cost commits at declaration and cannot be re-spent', () => {
+  let s = fixture({ profile, active: 1, hands: [quiet, ['6♠', '9♥', '4♠']], deckTop: ['10♦', 'J♣', 'Q♥', '2♦', '7♦', '3♠', '8♦', 'K♦'] });
+  const cost = id(s, '9♥');
+  s = act(s, 1, a => a.mode === 'deep-draw' && a.targetIds?.length === 1 && a.targetIds.includes(cost), 'deep-draw paying 9♥');
+  assert.ok(!s.players[1]!.hand.some(c => c.id === cost), 'the cost card leaves the hand at declaration');
+  for (const p of [0, 1]) assert.ok(!legal(s, p).some(a => a.cardId === cost || a.cardIds?.includes(cost) || a.targetIds?.includes(cost)), 'a committed cost is not re-offered while pending');
+  s = passAll(s);
+  assert.ok(s.graveyard.some(c => c.id === cost), 'the committed cost is Scrapped on resolve');
+  assert.equal(s.players[1]!.hand.length, 7, 'only the remaining card plus the six drawn');
+});
+
+test('Full §26 ⭐7 Sequential Topdeck: reveals two, declares each as a generated play in chosen order', () => {
+  let s = fixture({ profile, hands: [['7♣', '7♦', '6♦'], quiet], deckTop: ['3♥', '8♣', '5♣', 'J♦'] });
+  s = act(s, 0, a => a.mode === 'super-7');
+  s = passAll(s);
+  assert.equal(s.choice?.kind, 'full');
+  assert.equal(s.choice?.data.mode, 'super-7-order');
+  assert.equal(s.choice?.cards.length, 2, '⭐7 reveals exactly two cards');
+  s = act(s, 0, a => a.mode === 'super-7-first' && a.cardId === id(s, '8♣'));
+  assert.equal(s.choice?.kind, 'generated');
+  assert.equal(s.choice?.cards[0]!.rank, '8');
+  s = act(s, 0, a => a.mode === 'generated-score');
+  assert.equal(s.choice?.kind, 'generated', 'the second revealed card waits for its own declaration');
+  assert.equal(s.choice?.cards[0]!.rank, '3');
+  s = act(s, 0, a => a.mode === 'generated-score');
+  assert.deepEqual(s.players[0]!.pr.map(c => `${c.rank}${c.suit}`).sort(), ['3♥', '8♣'], 'both revealed cards were declared and scored');
+  assert.ok(s.players[0]!.hand.every(c => c.id === id(s, '6♦')), 'no revealed card entered the hand');
+});
+
+test('Full §26 7♠ Topdeck: take one revealed, declare one generated, return the rest to the top of DP', () => {
+  let s = fixture({ profile, hands: [['7♠', '6♦'], quiet], deckTop: ['4♥', '9♦', 'K♥', '2♠'] });
+  s = act(s, 0, a => a.mode === 'seven-spade');
+  s = passAll(s);
+  assert.equal(s.choice?.kind, 'seven-hand');
+  assert.equal(s.choice?.cards.length, 3);
+  s = act(s, 0, a => a.type === 'choose' && a.mode === 'select' && a.cardId === id(s, '4♥'));
+  const taken = s.players[0]!.hand.find(c => c.rank === '4' && c.suit === '♥');
+  assert.ok(taken?.revealed === 0, 'the taken card is Revealed-Until-Start');
+  assert.equal(s.choice?.kind, 'full');
+  assert.equal(s.choice?.cards.length, 2, 'one of the remaining cards is declared generated');
+  s = act(s, 0, a => a.mode === 'seven-gen' && a.cardId === id(s, '9♦'));
+  assert.equal(s.choice?.kind, 'generated');
+  assert.ok(s.deck[0]!.rank === 'K' && s.deck[0]!.suit === '♥', 'the leftover card returned to the top of DP');
+  s = act(s, 0, a => a.mode === 'generated-score');
+  assert.ok(s.players[0]!.pr.some(c => c.rank === '9' && c.suit === '♦'), 'the generated card resolved');
+});
+
+test('Full §9.4 Ultra Black: internal casts cannot spend the Ultra’s committed components as costs', () => {
+  let s = fixture({ profile, active: 0, hands: [['6♠', 'K♠', '3♣', '5♦'], quiet], deckTop: ['2♥', '4♥', '7♥', '8♦', '9♦', 'J♥', 'Q♦'] });
+  const offers = legal(s, 0).filter(a => a.mode === 'ultra-black:deep-draw');
+  assert.ok(offers.length, 'Deep Draw is offered as an internal Ultra cast');
+  for (const a of offers) for (const t of a.targetIds ?? []) assert.ok(!a.cardIds!.includes(t), 'cost sources must come from outside the Ultra');
+  s = act(s, 0, a => a.mode === 'ultra-black:deep-draw');
+  s = passAll(s);
+  assert.ok(s.graveyard.some(c => c.id === id(s, '5♦')), 'the paid cost is Scrapped');
+  assert.equal(s.players[0]!.hand.length, 6, 'the internal Deep Draw drew six');
+});

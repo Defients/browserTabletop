@@ -1,5 +1,33 @@
 # Status
 
+## Goal +5 report investigation; Seven-family and cost-commit fixes — September 29, 2026
+
+Investigated the user-reported "9♥ Goal Shift +5 raised the opponent Goal by 8" claim. A lone `goal5` adds exactly +5 (verified by test and direct fixture); the observed +8 was reproduced only by two separate Nine declarations (`goal5` then `goal3` in the same response window) resolving LIFO — legal per §6/§7, and both declarations appear in history. A Full-profile rules fuzz then exposed three real defects, all fixed:
+
+### Fixed
+
+- `deep-draw` (6♠) charged its discard cost at *resolution*, leaving the cost card spendable during the response window (double-spend, then `NOT_IN_HAND` crash that poisoned the `applyGame`). `commitWild` now commits every `targetIds` cost source from hand at declaration — the source-map requirement "cost sources are committed from hand at declaration" — deduped against already-committed `cardIds`. The resolution tail suspends them to GY with the source.
+- `compositeActions` Ultra-Black internal casts could offer the Ultra's own committed components as Deep Draw / Wild-4 cost sources; those offers are now excluded at enumeration.
+- `seven-hand` resolution only handled two revealed cards: 7♠ Topdeck (reveal 3) silently dropped the third card out of the game. The taken card is now marked Revealed-Until-Start (canonical §26 7🛠/7♠), a `seven-gen` follow-up choice selects which remaining card is declared as the generated play, and leftovers return to the top of DP. `seven-single` take also marks Revealed.
+- `super-7` (⭐7) was structurally wrong — it revealed 3 cards through the take-one flow, leaking a card every time. Rewritten to canonical Sequential Topdeck Casting: reveal up to 2, choose resolution order, declare each as a generated Topdeck Play one at a time; the second declaration is delivered through a suspended task that fires only after the first play and its nested children finish.
+- `peek` choice was `held: true` while its cards still lived in the Swap Bar, double-counting them in `everyCard` (+1/+2 per pending peek).
+
+### UI: tapped-state tag (user report "effect with no way to clear it")
+
+Tapped OTT cards rendered only a rotated face — no explanation of the residual Nine Tap / ⭐2 Hold state or its release condition. `GameBoard` now shows a `Tapped` tag naming the clear condition: `Nine Tap · 0 pts until {controller} scores` (Full, `tapUntil: 'score'`), `Held · 0 pts until {controller}’s Start` (⭐2 hold), `Tapped · 0 pts until {controller}’s Start` (First Contact §9). Pending composite plays also render the primary source card alongside committed partners (previously only `item.cards` rendered).
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| Node tests | PASS — 148/148 (4 new Full regression tests) |
+| First Contact fuzz (`smoke-games.ts`) | PASS — 400 games |
+| Full-profile rules fuzz | PASS — 400/400 games, zero integrity violations (was 254/400 crashing before) |
+
+No new interpretation was needed — every change follows explicit canonical §26 text. No public deployment, commit, or push occurred.
+
 ## ER Anchor value surfaced — September 29, 2026
 
 Fixed the user-reported bug that a King anchored in the Enduring Row did not register its Anchor value (ordinary K = 7, K♠ = 9 per §26 ⦗K⦘).

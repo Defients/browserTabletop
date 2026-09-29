@@ -43,6 +43,14 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
     : view.pending.length ? `${label(view.priority)} may respond` : `${label(view.activePlayer)}’s turn`;
 
   const pick = (c: GameCard) => setSelected(s => (s === c.id ? null : c.id));
+  const tapTag = (c: GameCard, owner: number) =>
+    full && c.tapUntil === 'score' ? `Nine Tap · 0 pts until ${label(owner)} scores`
+    : full && c.tapUntil === 'hold' ? `Held · 0 pts until ${label(owner)}’s Start`
+    : `Tapped · 0 pts until ${label(owner)}’s Start`;
+  const tapTitle = (c: GameCard, owner: number) =>
+    full && c.tapUntil === 'score' ? `Nine Tap (§26): scores 0 and stays tapped until ${label(owner)} scores a card for Points — any Points score releases it.`
+    : full && c.tapUntil === 'hold' ? `Commandeered hold (⭐2): ${label(owner)} controls it; it untaps at ${label(owner)}’s next Start Phase and may then cast one free effect.`
+    : `Tapped (§9): scores 0 until ${label(owner)}’s next Start Phase.`;
   const cardsRow = (items: GameCard[], empty: string, zone: 'pr' | 'er', owner: number) => (
     <div className="fc-cards">
       {items.length ? items.map(c => (
@@ -54,6 +62,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
           {zone === 'er' && !c.hostId && <span className="fc-tag" title={`Anchor value ${anchorValue(c)}`}>⚓ {anchorValue(c)}</span>}
           {full && (c.aegis !== undefined || c.exileBound || c.wildBound || c.playedForEffect) && <span className="full-card-states">{[c.aegis !== undefined && 'Aegis', (c.exileBound || c.wildBound) && 'Exile-bound', c.playedForEffect && 'Played for Effect'].filter(Boolean).join(' · ')}</span>}
           {zone === 'pr' && view.players[owner]!.er.some(j => j.hostId === c.id) && <span className="fc-tag fc-tag-jacked">Jacked +1</span>}
+          {c.tapped && <span className="fc-tag fc-tag-tapped" title={tapTitle(c, owner)}>{tapTag(c, owner)}</span>}
         </div>
       )) : <span className="fc-empty">{empty}</span>}
     </div>
@@ -126,7 +135,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
             <span className="eyebrow">Stack · newest first</span>
             {view.pending.length ? [...view.pending].reverse().map((i, n) => (
               <div key={i.id} className={`fc-stack-item ${n === 0 ? 'is-top' : ''}`}>
-                {(i.cards ?? (i.card ? [i.card] : [])).map(c => <CardFace key={c.id} size="sm" rank={c.rank} suit={c.suit} />)}
+                {[...(i.card ? [i.card] : []), ...(i.cards ?? [])].map(c => <CardFace key={c.id} size="sm" rank={c.rank} suit={c.suit} />)}
                 <span><b>{label(i.player)}</b> {i.label}{hints && <small>{RULES[i.ruleRef]?.ref}</small>}</span>
               </div>
             )) : <span className="fc-empty">Nothing pending</span>}

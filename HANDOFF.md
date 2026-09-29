@@ -1,4 +1,27 @@
-# Latest handoff: Face-Down Swap Bar fixed
+# Latest handoff: Goal +5 report resolved; Seven-family engine fixes
+
+Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+The reported "9♥ Goal Shift +5 added +8" was **not** a single-action defect: a lone `goal5` adds exactly +5. The +8 reproduces only when two Nine declarations resolve in one LIFO batch (e.g. `goal5` then `goal3` declared in the response window) — legal per §6/§7, and both declaration lines appear in history. No rules change for that report.
+
+The Full-profile fuzz used to verify this exposed three real defects, all fixed in `packages/intrilex/engine.ts`:
+
+- `deep-draw` (6♠) charged its discard cost at resolution instead of declaration; the cost card stayed spendable during the response window (even offered as a counter against its own play) and crashed `NOT_IN_HAND` when spent. `commitWild` now commits all `targetIds` cost sources at declaration (deduped against `cardIds`), and Ultra-Black inner casts can no longer name the Ultra's own components as costs.
+- `seven-hand` handled only 2 revealed cards — 7♠'s third revealed card vanished from the game. Now: taken card is Revealed-Until-Start, a `seven-gen` choice picks which remaining card declares, leftovers return to DP top. `seven-single` take also marks Revealed.
+- `super-7` revealed 3 through the take-one flow (canonical ⭐7: reveal 2, declare each as a generated play in chosen order). Rewritten with a suspended task that opens the second generated declaration after the first play and nested children finish. Also fixed `peek` choice `held:true` double-counting Swap Bar cards in `everyCard`.
+
+Gates: lint, typecheck, 148/148 Node tests (4 new regressions in `tests/intrilex.full.test.ts`), 400-game FC fuzz and 400-game Full fuzz both clean. Recorded in `STATUS.md`. No commit, push, or deployment.
+
+### Ranked next steps
+
+1. Implement the Reveals gap below (project `revealedHand`; expire `revealed` at Start with handle rotation) — now more visible since Seven/Topdeck flows mark `revealed` correctly.
+2. Continue expanding Full coverage per `docs/INTRILEX_FULL_AUDIT.md` (Voltage, BJ recycle, Sudden Death endgame).
+3. Obtain rules-owner rulings for source-map D-1 and D-3.
+4. Configure/deploy the separate multiplayer server only when authorized; keep the Neocities server origin blank.
+
+---
+
+# Previous handoff: Face-Down Swap Bar fixed
 
 Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
 

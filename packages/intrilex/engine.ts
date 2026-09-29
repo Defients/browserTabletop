@@ -71,9 +71,10 @@ function detachHeld(g: G, p: number, c: GameCard) {
   i = (s.exile ?? []).indexOf(c); if (i >= 0) s.exile!.splice(i, 1);
   i = (s.swapBar ?? []).findIndex(x => x.card === c); if (i >= 0) s.swapBar!.splice(i, 1);
 }
-/** K♠ Wild Sovereignty (v4.3.0): the source is Wild-Exile-Bound at declaration; the 4♠ copy additionally costs one discard, paid up front and never refunded. */
+/** Cost sources declared via targetIds (Wild-4's discard, Deep Draw's discards) commit from hand at declaration like composite sources. K♠ Wild Sovereignty (v4.3.0) is Wild-Exile-Bound at declaration. */
 function commitWild(g: G, p: number, a: GameAction, card: GameCard, extra: GameCard[]) {
-  if (a.mode?.includes('wild-4:')) for (const id of a.targetIds ?? []) extra.push(takeFromHand(g, p, id));
+  const held = new Set([card.id, ...extra.map(x => x.id)]);
+  for (const id of a.targetIds ?? []) if (!held.has(id)) { extra.push(takeFromHand(g, p, id)); held.add(id); }
   if (a.mode?.includes('wild-') && card.rank === 'K' && card.suit === '♠') card.wildBound = true;
 }
 function takeFromHand(g: G, p: number, id: string | undefined): GameCard {
@@ -302,7 +303,7 @@ function compositeActions(s:GameState,p:number,response:boolean):GameAction[] {
     if(response)for(const cards of combinations(red,3))for(const i of s.stack)if(superCan(s,p,i))add(cards,'ultra-red',i.id,'counter');
     if(!response&&!s.boardLock) {
       for(const cards of combinations(black,3))for(const score of cards)for(const cast of cards.filter(c=>c!==score)) {
-        for(const a of ordinaryModes(s,p,cast).filter(a=>infoFor(a.mode)?.cls==='effect')) out.push({...a,mode:`ultra-black:${a.mode}`,cardId:score.id,cardIds:[score.id,cast.id,cards.find(c=>c!==score&&c!==cast)!.id],label:`3 Black · score ${cardName(score)}; cast ${a.label}; Exile third`});
+        for(const a of ordinaryModes(s,p,cast).filter(a=>infoFor(a.mode)?.cls==='effect'&&!a.targetIds?.some(id=>cards.some(x=>x.id===id)))) out.push({...a,mode:`ultra-black:${a.mode}`,cardId:score.id,cardIds:[score.id,cast.id,cards.find(c=>c!==score&&c!==cast)!.id],label:`3 Black · score ${cardName(score)}; cast ${a.label}; Exile third`});
       }
       for(const b of combinations(black,2))for(const r of combinations(red,2)){add([...b,...r],'ultra-mixed-draw');for(const x of s.exile!)add([...b,...r],'ultra-mixed-exile',x.id);if(!s.exile!.length)add([...b,...r],'ultra-mixed-exile');}
     }
@@ -432,6 +433,12 @@ function fullChoices(s: GameState, p: number, q: Choice): GameAction[] {
     case 'super-5':
       for (const c of q.cards) pick('super-5-play', `Play ${cardName(c)}`, c.id, 'full.super-5');
       break;
+    case 'seven-gen':
+      for (const c of q.cards) pick('seven-gen', `Declare ${cardName(c)} as the generated play`, c.id, 'full.seven');
+      break;
+    case 'super-7-order':
+      for (const c of q.cards) pick('super-7-first', `Declare ${cardName(c)} first (Sequential Topdeck)`, c.id, 'full.super-7');
+      break;
     case 'theft':
       for (const id of (q.data.targets as string[] | undefined) ?? []) pick('theft-target', `Steal “${s.stack.find(i => i.id === id)?.action.label ?? id}”`, undefined, 'full.theft');
       break;
@@ -459,7 +466,7 @@ function choiceActions(s: GameState, p: number): GameAction[] {
       for (const c of hand) pick('dig-discard', `Keep all drawn; discard ${cardName(c)}`, c.id, '6.dig');
       break;
     }
-    case 'seven-hand': for (const c of q.cards) pick('select', `Take ${cardName(c)} into hand; play the other`, c.id, '7.base'); break;
+    case 'seven-hand': for (const c of q.cards) pick('select', `Take ${cardName(c)} into hand${q.cards.length > 2 ? '; declare one of the rest' : '; play the other'}`, c.id, '7.base'); break;
     case 'seven-single': pick('take', `Take ${cardName(q.cards[0]!)} into hand`, undefined, '7.base'); pick('play', `Play ${cardName(q.cards[0]!)} now`, undefined, '7.base'); break;
     case 'generated': {
       const c = q.cards[0]!;
@@ -1051,10 +1058,11 @@ function resolveEffect(g: G, item: StackItem, p: number, enemy: number, c: GameC
       break;
     }
     case 'super-7': {
-      const revealed = s.deck.splice(0, 3);
-      if (revealed.length) log(g, `Super Seven reveals ${revealed.map(cardName).join(', ')}.`);
-      if (revealed.length >= 2) setChoice(g, { player: p, kind: 'seven-hand', prompt: 'Super Seven: take one; the other becomes a generated play.', cards: revealed, public: true, held: true, data: { topdeck: 1 } });
-      else if (revealed.length === 1) setChoice(g, { player: p, kind: 'seven-single', prompt: 'Super Seven: take it or play it.', cards: revealed, public: true, held: true, data: { topdeck: 1 } });
+      // ⭐7 Sequential Topdeck Casting (§26): reveal up to 2; declare each, in the chosen order, as a generated Topdeck Play — no hand assignment.
+      const revealed = s.deck.splice(0, 2);
+      if (revealed.length) log(g, `Super Seven reveals ${revealed.map(cardName).join(' and ')}.`);
+      if (revealed.length === 2) setChoice(g, { player: p, kind: 'full', prompt: 'Sequential Topdeck: choose which card to declare first.', cards: revealed, public: true, held: true, data: { mode: 'super-7-order' } });
+      else if (revealed.length === 1) setChoice(g, { player: p, kind: 'generated', prompt: `Declare ${cardName(revealed[0]!)}: score it or use a legal effect.`, cards: revealed, public: true, held: true, data: { topdeck: 1 } });
       break;
     }
     case 'super-8': {
@@ -1105,12 +1113,11 @@ function resolveEffect(g: G, item: StackItem, p: number, enemy: number, c: GameC
     case 'seven-spade': {
       const revealed = s.deck.splice(0, 3);
       if (revealed.length) log(g, `Topdeck reveals ${revealed.map(cardName).join(', ')}.`);
-      if (revealed.length >= 2) setChoice(g, { player: p, kind: 'seven-hand', prompt: 'Topdeck: take one; play one.', cards: revealed, public: true, held: true, data: { topdeck: 1 } });
+      if (revealed.length >= 2) setChoice(g, { player: p, kind: 'seven-hand', prompt: 'Topdeck: take one into your hand; then declare one as a generated play.', cards: revealed, public: true, held: true, data: { topdeck: 1 } });
       else if (revealed.length === 1) setChoice(g, { player: p, kind: 'seven-single', prompt: 'Topdeck: take it or play it.', cards: revealed, public: true, held: true, data: { topdeck: 1 } });
       break;
     }
     case 'deep-draw': {
-      for (const id of item.action.targetIds ?? []) { const x = takeFromHand(g, p, id); toGraveyard(g, x); }
       const n = drawCards(g, p, 6);
       log(g, `${P(p)} discards ${(item.action.targetIds ?? []).length} and draws ${n} (Deep Draw).`);
       break;
@@ -1122,7 +1129,7 @@ function resolveEffect(g: G, item: StackItem, p: number, enemy: number, c: GameC
     }
     case 'peek': {
       const down = (s.swapBar ?? []).filter(x => !x.faceUp);
-      if (down.length) setChoice(g, { player: p, kind: 'full', prompt: 'Peek at face-down Swap Bar cards: take one or play one as an effect.', cards: down.map(x => x.card), public: false, held: true, data: { mode: 'peek' } });
+      if (down.length) setChoice(g, { player: p, kind: 'full', prompt: 'Peek at face-down Swap Bar cards: take one or play one as an effect.', cards: down.map(x => x.card), public: false, held: false, data: { mode: 'peek' } });
       else log(g, 'Peek: no face-down Swap Bar cards.');
       break;
     }
@@ -1233,17 +1240,24 @@ function resolveChoice(g: G, p: number, a: GameAction) {
     }
     case 'seven-hand': {
       const taken = q.cards.find(x => x.id === a.cardId)!;
-      const other = q.cards.find(x => x.id !== a.cardId)!;
+      const rest = q.cards.filter(x => x !== taken);
       const topdeck: Record<string, string | number | string[]> = q.data.topdeck ? { topdeck: 1 } : {};
       q.cards = [];
+      toHand(g, p, taken, true);
+      if (rest.length > 1) {
+        // 7♠: the hand assignment is chosen first, then which remaining card is declared; leftovers return to the top of DP.
+        log(g, `${P(p)} takes ${cardName(taken)}.`);
+        setChoice(g, { player: p, kind: 'full', prompt: 'Topdeck: choose which card to declare as a generated play.', cards: rest, public: true, held: true, data: { mode: 'seven-gen', ...topdeck } });
+        return;
+      }
+      const other = rest[0]!;
       log(g, `${P(p)} takes ${cardName(taken)}; ${cardName(other)} becomes a generated play.`);
-      toHand(g, p, taken);
       setChoice(g, { player: p, kind: 'generated', prompt: `Declare ${cardName(other)}: score it or use a legal effect.`, cards: [other], public: true, held: true, data: topdeck });
       return;
     }
     case 'seven-single': {
       const c = q.cards[0]!;
-      if (a.mode === 'take') { q.cards = []; toHand(g, p, c); log(g, `${P(p)} takes ${cardName(c)}.`); done(); }
+      if (a.mode === 'take') { q.cards = []; toHand(g, p, c, true); log(g, `${P(p)} takes ${cardName(c)}.`); done(); }
       else setChoice(g, { player: p, kind: 'generated', prompt: `Declare ${cardName(c)}: score it or use a legal effect.`, cards: [c], public: true, held: true, data: q.data.topdeck ? { topdeck: 1 } : {} });
       return;
     }
@@ -1331,6 +1345,25 @@ function resolveChoice(g: G, p: number, a: GameAction) {
           q.cards = [];
           done();
           if (c) { log(g, `${P(p)} plays the milled ${cardName(c)}.`); setChoice(g, { player: p, kind: 'generated', prompt: `Declare ${cardName(c)}: score it or use a legal effect.`, cards: [c], public: true, held: true, data: { topdeck: 1 } }); }
+          return;
+        }
+        case 'seven-gen': {
+          const c = q.cards.find(x => x.id === a.cardId)!;
+          const rest = q.cards.filter(x => x !== c);
+          q.cards = [];
+          for (const x of rest.reverse()) toDeck(g, x, 'top');
+          log(g, `${P(p)} declares ${cardName(c)} as a generated play${rest.length ? `; the rest return to the top of DP` : ''}.`);
+          setChoice(g, { player: p, kind: 'generated', prompt: `Declare ${cardName(c)}: score it or use a legal effect.`, cards: [c], public: true, held: true, data: q.data.topdeck ? { topdeck: 1 } : {} });
+          return;
+        }
+        case 'super-7-order': {
+          const c = q.cards.find(x => x.id === a.cardId)!;
+          const rest = q.cards.filter(x => x !== c);
+          q.cards = [];
+          // Each remaining revealed card waits suspended; its generated declaration opens once the current play and nested children finish (§26 Sequential Topdeck).
+          for (const x of rest) s.suspended.push({ depth: s.stack.length, task: { player: p, kind: 'generated', prompt: `Declare ${cardName(x)}: score it or use a legal effect.`, cards: [x], count: 1, public: true, held: true, data: { topdeck: 1 } } });
+          log(g, `${P(p)} declares ${cardName(c)} first (Sequential Topdeck).`);
+          setChoice(g, { player: p, kind: 'generated', prompt: `Declare ${cardName(c)}: score it or use a legal effect.`, cards: [c], public: true, held: true, data: { topdeck: 1 } });
           return;
         }
         case 'theft':

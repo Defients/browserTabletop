@@ -1,6 +1,43 @@
 # Status
 
-## Upload preparation: ttsbrowser.neocities.org — September 29, 2026
+## Intrilex Full-profile engine implementation — September 29, 2026
+
+Reconstructed the Full-profile engine layer in `packages/intrilex/engine.ts` after an accidental `git checkout` had reverted the uncommitted work. The First Contact baseline is preserved; Full behavior branches on `full(s)`.
+
+### Re-applied / newly implemented
+
+- `FULL_MODES` table (~30 modes: purge-aegis, total-clear, raid-spade, seven-spade, deep-draw, exile-rummage, peek, aegis-field, queen-aegis, free-scuttle, goal5-spade, attach-er, tempo, exile-recovery, theft, court, marriage, super-2-score/hold, super-3-raid/discard, super-4-pr/er, super-5/6/7/8/J/A, ultra-red/black/mixed-draw/mixed-exile, sudden).
+- `fullOrdinary` (suit-specific 3♠/4♠/6♠/7♠/J♠, 5 exile rummage, 10♥/♠/♦, 2/K♠ wild copy), `compositeActions` (Super, Court, Marriage, Sudden, Ultra), `superModes`, `fullChoices` dispatcher for `Choice.kind === 'full'`.
+- `perform` cases for `start-action`, `swap-down`, `swap-draw`, `draw-cast`, `voltage`, and composite `cardIds`/`targetIds` sources.
+- `resolve` handles `draw-cast`, `foundation`, `bj-recycle` triggers; `resolveEffect` handles all Full modes; `resolveChoice` handles the `'full'` choice kind (foundation, bj-recycle, peek, exile-rummage, super-5, voltage, theft).
+- `scoreCard` Nine `tapUntil === 'score'` release, 10♣ Foundation Aegis + optional trigger, BJ Exile Recycle trigger.
+- `startTurn` Full Start Phase (`phase: 'start'`, swap/ten/ultra/court/quickQ flags reset, no auto-untap).
+- `projectGame` exposes public `exile`, `swapBar` (face-up only), `suddenDeath`, `miniTurnsGranted`, `voltage`; face-down Swap Bar slots omit card identities.
+- `createGame` Full setup: version 3, Goal 21, Exile, Swap Bar (2 face-down + 1 face-up).
+- Counter resolution scraps all composite sources (`negated.cards`, `item.cards`).
+- Fixed invalid UTF-8 in `packages/templates/index.ts` (mis-encoded `·` middle dot).
+- Added `release/**` to eslint ignores (generated build artifacts).
+
+### Final executable-tree gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| Node tests | PASS — 132/132 (includes 12 Full-profile tests) |
+| Standard production build | PASS |
+| Neocities build | PASS — four files, ~436 KB uncompressed |
+| E2E (Playwright) | PASS — 24/24 (Chromium + Firefox), including Full table public/private zones |
+
+### Notes
+
+- The Full-profile engine is a large surface; the 12 Full tests cover setup, privacy projection, Exile ordering, forged-command rejection, normal-victory timing, Queen Court (counter + once-declared), Royal Marriage, Queen entry Aegis, Nine tap/release, and Aegis blocking. Broader fuzz/coverage of every Super/Ultra mode is future work.
+- No public deployment or upload was performed. The Neocities bundle still ships with a blank multiplayer server origin.
+- `docs/INTRILEX_FULL_AUDIT.md` remains the checklist; not every audit item has a dedicated test yet.
+
+---
+
+
 
 Prepared `release/ttsbrowser-neocities-upload.zip` and `release/ttsbrowser-neocities/upload/` with four browser files, target-specific instructions, checksum and per-file manifest. Rebuilt static output/typecheck passed. Local target-origin smoke checks passed in Chromium and Firefox using the observed public CSP; no missing assets, API requests or page errors. See `artifacts/verification/ttsbrowser-upload-smoke.json` and `ttsbrowser-build.log`.
 

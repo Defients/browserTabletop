@@ -65,6 +65,8 @@ test('keyboard-only: create a table, open and close dialogs with focus restored,
   await expect(page.getByRole('heading', { name: 'Create a table' })).toBeVisible();
   await page.getByRole('radio', { name: /Intrilex · First Contact/ }).focus();
   await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('radio', { name: /Intrilex · Full/ })).toBeChecked();
+  await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('radio', { name: /The classic deck/ })).toBeChecked();
   await page.getByLabel('Your nickname').focus();
   await page.keyboard.type('Keys');

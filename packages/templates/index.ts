@@ -98,7 +98,15 @@ function intrilex(core: boolean): TableTemplate {
   };
 }
 
-export const builtInTemplates: TableTemplate[] = [intrilex(false), standard, intrilex(true), studio, blank];
+/** Full shares the canonical board layout with Core; authority comes exclusively from its trusted adapter. */
+const full: TableTemplate = {
+  ...intrilex(true), id: 'intrilex-full', title: 'Intrilex · Full', profile: 'intrilex-full',
+  description: 'Two-player Intrilex with authoritative setup, legal actions, responses, scoring, Swap Bar and advanced rules.',
+  objects: [0, 1].map(p => counter(`goal-${p}`, `Player ${p + 1} Goal`, 21, 40, p === 1 ? 140 : 600)),
+  labels: [], plugins: { intrilex: { rulesVersion: '4.3.1' } },
+};
+
+export const builtInTemplates: TableTemplate[] = [intrilex(false), full, standard, intrilex(true), studio, blank];
 
 // ---------------------------------------------------------------- validation (client and server trust boundary)
 

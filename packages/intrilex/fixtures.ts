@@ -17,12 +17,17 @@ export function parseCard(text: string): { rank: Rank; suit: Suit; tapped: boole
 }
 
 export type ErSpec = string | { card: string; host: string };
+export type SwapSpec = string | { card: string; faceUp: boolean };
 export interface FixtureSpec {
+  /** Rules profile; defaults to First Contact. Full produces a version-3 state with Exile and Swap Bar. */
+  profile?: 'intrilex-first-contact' | 'intrilex-full';
   /** Active player (lessons use 0 for the learner). */
   active?: 0 | 1; turn?: number; miniTurns?: number;
   hands: [string[], string[]]; pr?: [string[], string[]]; er?: [ErSpec[], ErSpec[]];
   graveyard?: string[]; deckTop?: string[]; goals?: [number, number]; seed?: number;
+  exile?: string[]; swapBar?: SwapSpec[];
   boardLock?: { remaining: number; activationTurn: number; player: number }; exhausted?: number | null;
+  suddenDeath?: { remaining: number; activationTurn: number; player: number } | null;
   /** Put every unlisted card in the graveyard instead of the Draw Pile (for Exhausted scenarios). */
   restToGraveyard?: boolean;
 }
@@ -44,7 +49,12 @@ export function fixture(spec: FixtureSpec): GameState {
     return { id: `f${++n}x${Math.floor(random() * 1e9).toString(36)}`, rank, suit, owner, ...(tapped ? { tapped: true } : {}) };
   };
   const active = spec.active ?? 0;
-  const players = [0, 1].map(p => ({ hand: spec.hands[p]!.map(t => make(t)), pr: (spec.pr?.[p] ?? []).map(t => make(t, p)), er: [] as GameCard[], goal: spec.goals?.[p] ?? GOAL, quick2Used: false, disrupted: [] as never[] }));
+  const isFull = spec.profile === 'intrilex-full';
+  const players = [0, 1].map(p => ({
+    hand: spec.hands[p]!.map(t => make(t)), pr: (spec.pr?.[p] ?? []).map(t => make(t, p)), er: [] as GameCard[],
+    goal: spec.goals?.[p] ?? (isFull ? 21 : GOAL), quick2Used: false, disrupted: [] as never[],
+    ...(isFull ? { swapUsed: false, quickQUsed: false, courtUsed: false, tenUsed: false, ultraUsed: false, skips: 0, starts: 0 } : {}),
+  }));
   for (let p = 0; p < 2; p++) for (const e of spec.er?.[p] ?? []) {
     if (typeof e === 'string') { players[p]!.er.push(make(e, p)); continue; }
     const want = parseCard(e.host);
@@ -55,14 +65,17 @@ export function fixture(spec: FixtureSpec): GameState {
   }
   const graveyard = (spec.graveyard ?? []).map(t => make(t));
   const deckTop = (spec.deckTop ?? []).map(t => make(t));
+  const exile = (spec.exile ?? []).map(t => make(t));
+  const swapBar = (spec.swapBar ?? []).map(x => typeof x === 'string' ? { card: make(x), faceUp: true } : { card: make(x.card), faceUp: x.faceUp });
   const rest = shuffle([...pool.entries()].filter(([k]) => !used.has(k)).map(([, c]) => ({ id: `f${++n}x${Math.floor(random() * 1e9).toString(36)}`, ...c, owner: -1 })), random);
   const s: GameState = {
-    version: 2, profile: 'intrilex-first-contact', players,
+    version: isFull ? 3 : 2, profile: isFull ? 'intrilex-full' : 'intrilex-first-contact', players,
     deck: spec.restToGraveyard ? deckTop : [...deckTop, ...rest], graveyard: spec.restToGraveyard ? [...graveyard, ...rest] : graveyard,
     activePlayer: active, phase: 'action', miniTurns: spec.miniTurns ?? 1, turn: spec.turn ?? 3,
     stack: [], priority: active, passes: 0, choice: null, suspended: [],
     boardLock: spec.boardLock ?? null, exhausted: spec.exhausted ?? null, winner: null,
     history: ['Teaching position loaded (fixed deal).'], events: [], seq: 0,
+    ...(isFull ? { exile, swapBar, suddenDeath: spec.suddenDeath ?? null, miniTurnsGranted: 1, miniTurnsUsed: 0, voltage: [] as number[] } : {}),
   };
   assertGameIntegrity(s);
   return s;
@@ -71,6 +84,6 @@ export function fixture(spec: FixtureSpec): GameState {
 /** Find a card by notation anywhere in the state (tests and lessons). */
 export function findCard(s: GameState, text: string): GameCard | undefined {
   const { rank, suit } = parseCard(text);
-  const all = [...s.players.flatMap(p => [...p.hand, ...p.pr, ...p.er]), ...s.deck, ...s.graveyard, ...s.stack.flatMap(i => (i.card ? [i.card] : [])), ...(s.choice?.held ? s.choice.cards : [])];
+  const all = [...s.players.flatMap(p => [...p.hand, ...p.pr, ...p.er]), ...s.deck, ...s.graveyard, ...(s.exile ?? []), ...(s.swapBar ?? []).map(x => x.card), ...s.stack.flatMap(i => [...(i.card ? [i.card] : []), ...(i.cards ?? [])]), ...(s.choice?.held ? s.choice.cards : []), ...s.suspended.flatMap(x => [...(x.card ? [x.card] : []), ...(x.task?.held ? x.task.cards : [])])];
   return all.find(c => c.rank === rank && c.suit === suit);
 }

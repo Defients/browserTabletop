@@ -8,7 +8,7 @@ import { HOST_COMMANDS, parseClientMessage, type CreateRoomResponse, type Server
 import { openStore, StoreError, type Store } from './store.js';
 import {
   ApiError, DAY, MEMBERSHIP_LIMIT, ROOM_TTL, SPECTATOR_LIMIT, applyCommand, freshState, nickname, parseRoomCommand,
-  requireThat, roomView, seatCount, staleTolerant, type Participant, type Room, type Session,
+  requireThat, roomView, seatCount, staleTolerant, validateRoomVersion, type Participant, type Room, type Session,
 } from './rooms.js';
 
 const token = () => randomBytes(32).toString('base64url');
@@ -37,7 +37,7 @@ export function createServer(options: ServerOptions) {
     const room = store.getRoom(id);
     requireThat(room, 404, 'ROOM_NOT_FOUND');
     requireThat(room.expires > now(), 410, 'ROOM_EXPIRED');
-    requireThat(room.schemaVersion === 2 && room.rulesVersion === '4.3.1', 409, 'ROOM_VERSION_UNSUPPORTED');
+    validateRoomVersion(room);
     return room;
   };
   const member = (room: Room, session: Session): Participant => {
@@ -159,7 +159,7 @@ export function createServer(options: ServerOptions) {
         catch { throw new ApiError(400, 'INVALID_TEMPLATE'); }
         const p: Participant = { id: token(), session: session.id, nickname: nickname(b.nickname), seat: 0, heldSeats: [0] };
         const room: Room = {
-          id: token(), title: template.title, revision: 0, schemaVersion: 2, rulesVersion: '4.3.1', engineVersion: 2, template,
+          id: token(), title: template.title, revision: 0, schemaVersion: 2, rulesVersion: '4.3.1', engineVersion: template.profile === 'intrilex-full' ? 3 : 2, template,
           participants: [p], host: p.id, invite: token(), spectatorInvite: token(), locked: false,
           history: [`${p.nickname} created the table.`], savedAt: new Date(now()).toISOString(), created: now(), expires: now() + ROOM_TTL,
           ...freshState(template, secureRandom),

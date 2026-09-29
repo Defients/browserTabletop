@@ -266,6 +266,15 @@ span.card { cursor: default; }
 .chip-row { display: flex; flex-wrap: wrap; gap: .35rem; }
 .chip { font-size: .78rem; min-height: 1.8rem; padding: .1rem .6rem; border-radius: 999px; }
 .fc-actions { display: flex; flex-direction: column; gap: .35rem; }
+.full-shared { display: flex; flex-wrap: wrap; gap: .7rem; border: 1px solid var(--line); border-radius: 12px; padding: .65rem; }
+.full-swap { flex: 1 1 260px; min-width: 0; }
+.full-swap .fc-cards { flex-wrap: wrap; }
+.full-swap-slot { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
+.full-swap-slot small { color: var(--muted); font-size: .7rem; }
+.full-exile { flex: 0 1 150px; align-self: center; }
+.full-revealed { margin-top: .5rem; padding: .5rem; border: 1px dashed var(--line); border-radius: 8px; }
+.full-revealed summary { font-size: .85rem; margin-bottom: .4rem; }
+.full-card-states { display: block; max-width: 90px; font-size: .65rem; color: var(--accent); text-align: center; }
 .action-btn { justify-content: flex-start; text-align: left; flex-direction: column; align-items: flex-start; gap: 0; padding: .45rem .7rem; }
 .action-score { border-left: 4px solid #86e0a2; }
 .action-effect, .action-generated-effect { border-left: 4px solid #b69cff; }

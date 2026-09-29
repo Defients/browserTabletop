@@ -19,7 +19,7 @@ export interface Participant {
   heldSeats: number[]; recoveryHash?: string;
 }
 export interface Room {
-  id: string; title: string; revision: number; schemaVersion: 2; rulesVersion: '4.3.1'; engineVersion: 2;
+  id: string; title: string; revision: number; schemaVersion: 2; rulesVersion: '4.3.1'; engineVersion: 2 | 3;
   template: TableTemplate; table?: TableState; game?: GameState;
   participants: Participant[]; host: string; invite: string; spectatorInvite: string; locked: boolean;
   history: string[]; savedAt: string; created: number; expires: number;
@@ -27,12 +27,28 @@ export interface Room {
 }
 
 /** Trusted rules adapters are built-in code. A template's profile only selects one; templates never carry logic. */
-const guided = { 'intrilex-first-contact': { seats: 2 } } as const;
+const guided = { 'intrilex-first-contact': { seats: 2 }, 'intrilex-full': { seats: 2 } } as const;
 export const isGuided = (t: TableTemplate) => t.profile in guided;
 export const seatCount = (room: Room) => (room.game ? 2 : room.template.seats);
 
 export function freshState(template: TableTemplate, random: () => number): Pick<Room, 'table' | 'game'> {
-  return isGuided(template) ? { game: createGame({ random }) } : { table: createTable(template, random) };
+  if (template.profile === 'intrilex-first-contact' || template.profile === 'intrilex-full') {
+    requireThat(template.seats === 2, 400, 'GUIDED_REQUIRES_TWO_SEATS');
+    return { game: createGame({ profile: template.profile, random }) };
+  }
+  return { table: createTable(template, random) };
+}
+
+/** Explicitly reject mismatched saved identities instead of interpreting one profile as another. */
+export function validateRoomVersion(room: Room): void {
+  requireThat(room.schemaVersion === 2 && room.rulesVersion === '4.3.1', 409, 'ROOM_VERSION_UNSUPPORTED');
+  if (isGuided(room.template)) {
+    const version = room.template.profile === 'intrilex-full' ? 3 : 2;
+    requireThat(room.template.seats === 2 && !room.table && room.game && room.engineVersion === version &&
+      room.game.version === version && room.game.profile === room.template.profile, 409, 'ROOM_VERSION_UNSUPPORTED');
+  } else {
+    requireThat(room.engineVersion === 2 && room.table && !room.game, 409, 'ROOM_VERSION_UNSUPPORTED');
+  }
 }
 
 export function roomView(room: Room, p: Participant, connected: Set<string>): RoomView {
@@ -65,9 +81,15 @@ export function parseRoomCommand(input: unknown): RoomCommand {
     case 'table': try { return { type: 'table', action: parseTableCommand(c.action) }; } catch { throw new ApiError(400, 'INVALID_COMMAND'); }
     case 'game': {
       const a = c.action as Record<string, unknown> | undefined;
-      requireThat(a && typeof a === 'object' && typeof a.type === 'string' && a.type.length <= 32, 400, 'INVALID_COMMAND');
+      requireThat(a && typeof a === 'object' && !Array.isArray(a) && typeof a.type === 'string' && a.type.length > 0 && a.type.length <= 32, 400, 'INVALID_COMMAND');
       const opt = (v: unknown) => { requireThat(v === undefined || (typeof v === 'string' && v.length <= 64), 400, 'INVALID_COMMAND'); return v as string | undefined; };
-      return { type: 'game', action: { type: a!.type as string, cardId: opt(a!.cardId), targetId: opt(a!.targetId), mode: opt(a!.mode) } };
+      requireThat(Object.keys(a!).every(k => ['type', 'cardId', 'targetId', 'cardIds', 'targetIds', 'mode', 'label', 'ruleRef'].includes(k)), 400, 'INVALID_COMMAND');
+      const ids = (v: unknown, max: number): string[] | undefined => {
+        if (v === undefined) return undefined;
+        requireThat(Array.isArray(v) && v.length > 0 && v.length <= max && v.every(x => typeof x === 'string' && x.length > 0 && x.length <= 64) && new Set(v).size === v.length, 400, 'INVALID_COMMAND');
+        return [...v] as string[];
+      };
+      return { type: 'game', action: { type: a!.type as string, cardId: opt(a!.cardId), targetId: opt(a!.targetId), mode: opt(a!.mode), cardIds: ids(a!.cardIds, 4), targetIds: ids(a!.targetIds, 8) } };
     }
     case 'seat': requireThat(c.seat === null || (typeof c.seat === 'number' && Number.isInteger(c.seat) && c.seat >= 0 && c.seat < 8), 400, 'INVALID_SEAT'); return { type: 'seat', seat: c.seat as number | null };
     case 'leave': case 'rotate-invite': case 'undo': return { type: c.type };

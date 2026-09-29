@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { GameAction, GameCard, GameView } from '../../packages/intrilex/types.js';
-import { RULES, explainCard } from '../../packages/intrilex/index.js';
+import { RULES, explainAction, explainCard } from '../../packages/intrilex/index.js';
 import type { ClientMessage, ParticipantView } from '../../packages/protocol/index.js';
 import { CardFace, Modal, cardName } from './common.js';
 import { PresenceLayer } from './Presence.js';
@@ -20,18 +20,22 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
   const [selected, setSelected] = useState<string | null>(null);
   const [inspect, setInspect] = useState<GameCard | null>(null);
   const [gy, setGy] = useState(false);
+  const [exileOpen, setExileOpen] = useState(false);
   const [why, setWhy] = useState<string[] | null>(null);
   const [sheet, setSheet] = useState(true);
+  const [actionSearch, setActionSearch] = useState('');
   const surface = useRef<HTMLDivElement>(null);
   const me = view.you ?? 0;
+  const full = view.profile === 'intrilex-full';
   const them = 1 - me;
   const label = (p: number) => names?.[p] ?? (p === view.you ? 'You' : `Player ${p + 1}`);
   const handIds = new Set(view.hand.map(c => c.id));
+  const visibleCards = [...view.hand, ...view.players.flatMap(p => [...p.pr, ...p.er, ...(p.revealedHand ?? [])]), ...(view.choice?.cards ?? []), ...(view.swapBar ?? []).flatMap(s => s.card ? [s.card] : [])];
 
   const actions = useMemo(() => {
-    const list = view.legalActions.filter(a => !selected || a.cardId === selected || a.targetId === selected || (!a.cardId && !a.targetId && a.type !== 'choose'));
-    return list.slice().sort((a, b) => (TYPE_ORDER[a.type] ?? 9) - (TYPE_ORDER[b.type] ?? 9));
-  }, [view.legalActions, selected]);
+    const list = view.legalActions.filter(a => !selected || a.cardId === selected || a.targetId === selected || a.cardIds?.includes(selected) || a.targetIds?.includes(selected) || (!a.cardId && !a.targetId && !a.cardIds?.length && !a.targetIds?.length && a.type !== 'choose'));
+    return list.filter(a => !actionSearch || a.label.toLocaleLowerCase().includes(actionSearch.trim().toLocaleLowerCase())).sort((a, b) => (TYPE_ORDER[a.type] ?? 9) - (TYPE_ORDER[b.type] ?? 9));
+  }, [view.legalActions, selected, actionSearch]);
   const myDecision = view.legalActions.length > 0;
   const status = view.winner !== null ? (view.winner === 'draw' ? 'The game is drawn.' : `${label(view.winner)} ${view.winner === view.you ? 'win' : 'wins'}!`)
     : view.choice ? (view.choice.player === view.you ? 'Your choice' : `${label(view.choice.player)} is choosing`)
@@ -47,6 +51,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
             extraLabel={c.hostId ? `Jack attached to ${cardName(items.find(x => x.id === c.hostId) ?? view.players[owner]!.pr.find(x => x.id === c.hostId) ?? { rank: undefined })}` : undefined}
             onClick={() => pick(c)} onDoubleClick={() => { setInspect(c); onInspectCard?.(); }} />
           {c.hostId && <span className="fc-tag">Jack</span>}
+          {full && (c.aegis !== undefined || c.exileBound || c.wildBound || c.playedForEffect) && <span className="full-card-states">{[c.aegis !== undefined && 'Aegis', (c.exileBound || c.wildBound) && 'Exile-bound', c.playedForEffect && 'Played for Effect'].filter(Boolean).join(' · ')}</span>}
           {zone === 'pr' && view.players[owner]!.er.some(j => j.hostId === c.id) && <span className="fc-tag fc-tag-jacked">Jacked +1</span>}
         </div>
       )) : <span className="fc-empty">{empty}</span>}
@@ -66,6 +71,8 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
           <span className="pill">{pl.handCount} in hand</span>
           {pl.guard && <span className="pill pill-guard" title={RULES.guard!.summary}>♛ Guard</span>}
           {pl.disrupted.length > 0 && <span className="pill">Disrupted: {pl.disrupted.join(', ')}</span>}
+          {full && <span className="pill">Swap {pl.swapUsed ? 'used' : 'available'}</span>}
+          {!!pl.skips && <span className="pill pill-warn">{pl.skips} turn skips pending</span>}
           <span className="fc-score" aria-label={`${pl.score} secured points of ${pl.goal} goal`}><b>{pl.score}</b> / {pl.goal}<small>secured / Goal</small></span>
         </header>
         <div className={`fc-row fc-er ${highlight === 'er' && mine ? 'is-lesson-target' : ''}`} {...(mine ? zoneProps('er') : { 'data-zone': 'er-opp' })}>
@@ -74,6 +81,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
         <div className={`fc-row fc-pr ${highlight === 'pr' && mine ? 'is-lesson-target' : ''}`} {...(mine ? zoneProps('pr') : { 'data-zone': 'pr-opp' })}>
           <span className="fc-row-name">Point Row <abbr title="Point Row">PR</abbr></span>{mine && pickArea('pr')}{cardsRow(pl.pr, 'Scored cards', 'pr', p)}
         </div>
+        {!!pl.revealedHand?.length && <details className="full-revealed" open><summary>Publicly revealed hand · {pl.revealedHand.length}</summary><div className="fc-cards">{pl.revealedHand.map(c => <CardFace key={c.id} size="sm" rank={c.rank} suit={c.suit} extraLabel="Public until recorded Start" onClick={() => setInspect(c)} />)}</div></details>}
       </section>
     );
   };
@@ -87,12 +95,22 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
         onDoubleClick={e => { if (!presence || !surface.current) return; const r = surface.current.getBoundingClientRect(); presence({ type: 'ping', x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)), surface: 'game' }); }}>
         {banner}
         <div className="fc-status" role="status" aria-live="polite">
-          <span className="eyebrow">First Contact · Turn {view.turn}</span>
+          <span className="eyebrow">{full ? 'Intrilex Full' : 'First Contact'} · Turn {view.turn}{full && ` · ${view.phase === 'start' ? 'Start Phase' : view.phase === 'finished' ? 'Finished' : 'Action Phase'}`}</span>
           <strong>{status}</strong>
-          <span>{view.winner === null && `${label(view.activePlayer)}: ${view.miniTurns ? '1 Action left' : 'Action spent'}`}</span>
+          <span>{view.winner === null && `${label(view.activePlayer)}: ${full ? `${view.miniTurns} Mini-Turn${view.miniTurns === 1 ? '' : 's'} left` : view.miniTurns ? '1 Action left' : 'Action spent'}`}</span>
+          {full && view.miniTurnsGranted !== undefined && <span className="pill">{view.miniTurnsGranted} / 3 Mini-Turns granted</span>}
+          {view.suddenDeath && <span className="pill pill-warn">Sudden Death · {label(view.suddenDeath.player)} · {view.suddenDeath.remaining} to go</span>}
+          {!!view.voltage?.length && <span className="pill">Voltage snapshot · ranks {view.voltage.join(', ')}</span>}
           {view.boardLock && <span className="pill pill-warn" title={RULES['BJ.lock']!.summary}>Board Lock · {view.boardLock.remaining} to go</span>}
           {view.exhausted !== null && <span className="pill pill-warn" title={RULES.exhausted!.summary}>Exhausted · {view.exhausted}</span>}
         </div>
+        {full && <section className="full-shared" aria-label="Full shared zones">
+          <div className="full-swap" role="group" aria-label="Swap Bar"><div className="hand-head"><strong>Swap Bar</strong><span>Once per Full Turn · finite supply</span></div><div className="fc-cards">
+            {view.swapBar?.map(entry => <div className="full-swap-slot" key={entry.slot}>{entry.card ? <CardFace size="sm" rank={entry.card.rank} suit={entry.card.suit} selected={selected === entry.card.id} onClick={() => pick(entry.card!)} /> : <CardFace size="sm" />}<small>Slot {entry.slot + 1} · {entry.card ? 'face-up' : 'hidden'}</small></div>)}
+            {!view.swapBar?.length && <span className="fc-empty">Swap Bar empty</span>}
+          </div></div>
+          <div className="full-exile" role="group" aria-label={`Exile, ${view.exile?.length ?? 0} cards`}><strong>Exile · {view.exile?.length ?? 0}</strong><p className="muted small">Public · newest last</p><button type="button" disabled={!view.exile?.length} onClick={() => setExileOpen(true)}>Browse Exile</button></div>
+        </section>}
         {field(them)}
         <div className="fc-center">
           <div role="group" className={`fc-pile ${highlight === 'dp' ? 'is-lesson-target' : ''}`} {...zoneProps('dp')} aria-label={`Draw Pile, ${view.deckCount} cards`}>
@@ -107,7 +125,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
             <span className="eyebrow">Stack · newest first</span>
             {view.pending.length ? [...view.pending].reverse().map((i, n) => (
               <div key={i.id} className={`fc-stack-item ${n === 0 ? 'is-top' : ''}`}>
-                {i.card && <CardFace size="sm" rank={i.card.rank} suit={i.card.suit} />}
+                {(i.cards ?? (i.card ? [i.card] : [])).map(c => <CardFace key={c.id} size="sm" rank={c.rank} suit={c.suit} />)}
                 <span><b>{label(i.player)}</b> {i.label}{hints && <small>{RULES[i.ruleRef]?.ref}</small>}</span>
               </div>
             )) : <span className="fc-empty">Nothing pending</span>}
@@ -122,9 +140,9 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
         {field(me)}
         {view.you !== null && (
           <section className={`fc-hand ${highlight === 'hand' ? 'is-lesson-target' : ''}`} aria-label="Your private hand" {...zoneProps('hand')}>
-            <div className="hand-head"><strong>Your hand</strong><span>Private — only you see these faces</span>{pickArea('hand')}</div>
+            <div className="hand-head"><strong>Your hand</strong><span>{view.players[me]!.revealedHand?.length ? 'Private except cards marked public below' : 'Private — only you see these faces'}</span>{pickArea('hand')}</div>
             <div className="fc-cards">
-              {view.hand.map(c => <CardFace key={c.id} rank={c.rank} suit={c.suit} selected={selected === c.id} onClick={() => pick(c)} onDoubleClick={() => { setInspect(c); onInspectCard?.(); }} />)}
+              {view.hand.map(c => <CardFace key={c.id} rank={c.rank} suit={c.suit} extraLabel={view.players[me]!.revealedHand?.some(r => r.id === c.id) ? 'Publicly revealed until recorded Start' : undefined} selected={selected === c.id} onClick={() => pick(c)} onDoubleClick={() => { setInspect(c); onInspectCard?.(); }} />)}
               {!view.hand.length && <span className="fc-empty">No cards in hand</span>}
             </div>
           </section>
@@ -138,17 +156,19 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
           {onToggleHints && <button type="button" className="link-btn" onClick={onToggleHints} aria-pressed={hints}>{hints ? 'Fewer hints' : 'More hints'}</button>}
           <button type="button" className="narrow-only" aria-expanded={sheet} onClick={() => setSheet(s => !s)}>{sheet ? 'Hide' : 'Show'}</button>
         </div>
-        {selected && <div className="chip-row"><button type="button" className="chip" onClick={() => setSelected(null)}>Filtering by {cardName([...view.hand, ...view.players.flatMap(p => [...p.pr, ...p.er]), ...(view.choice?.cards ?? [])].find(c => c.id === selected) ?? {})} ×</button>
+        {selected && <div className="chip-row"><button type="button" className="chip" onClick={() => setSelected(null)}>Filtering by {cardName(visibleCards.find(c => c.id === selected) ?? {})} ×</button>
           {handIds.has(selected) && <button type="button" className="chip" onClick={showWhy}>Why can / can’t I?</button>}
-          <button type="button" className="chip" onClick={() => { const c = [...view.hand, ...view.players.flatMap(p => [...p.pr, ...p.er])].find(x => x.id === selected); if (c) { setInspect(c); onInspectCard?.(); } }}>Inspect</button></div>}
+          <button type="button" className="chip" onClick={() => { const c = visibleCards.find(x => x.id === selected); if (c) { setInspect(c); onInspectCard?.(); } }}>Inspect</button></div>}
         {hints && !selected && myDecision && <p className="muted small">Select a card to focus its choices. Legal choices only are listed; the engine checks them again.</p>}
+        {full && hints && view.phase === 'start' && <p className="muted small">Start Phase: resolve any choices, optionally use a face-down Swap, then enter the Action Phase. The listed choices come from the rules engine.</p>}
+        {full && myDecision && <label className="small">Find a legal action<input type="search" value={actionSearch} onChange={e => setActionSearch(e.target.value)} placeholder="Card, mode or target…" /></label>}
         <div className="fc-actions">
           {actions.map((a, i) => (
-            <button type="button" key={`${a.type}|${a.cardId}|${a.targetId}|${a.mode}|${i}`} className={`action-btn action-${a.type}`} disabled={busy} onClick={() => { onAction(a); setSelected(null); }}>
+            <button type="button" title={explainAction(a)} key={`${a.type}|${a.cardId}|${a.targetId}|${a.mode}|${i}`} className={`action-btn action-${a.type}`} disabled={busy} onClick={() => { onAction(a); setSelected(null); setActionSearch(''); }}>
               <span>{a.label}</span>{hints && RULES[a.ruleRef] && <small>{RULES[a.ruleRef]!.ref}</small>}
             </button>
           ))}
-          {!actions.length && <p className="empty-note">{view.winner !== null ? 'This game is complete.' : view.you === null ? 'Spectators follow every public play. Hands stay private.' : selected ? 'No legal action with this card right now.' : `Waiting for ${label(view.choice?.player ?? view.priority)}.`}</p>}
+          {!actions.length && <p className="empty-note">{view.winner !== null ? 'This game is complete.' : view.you === null ? 'Spectators follow every public play. Hands stay private.' : actionSearch ? 'No legal action matches this search. Clear the search to see other choices.' : selected ? 'No legal action with this card right now.' : `Waiting for ${label(view.choice?.player ?? view.priority)}.`}</p>}
         </div>
         <details className="fc-history" open={hints}>
           <summary>What happened?</summary>
@@ -158,9 +178,10 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
 
       {inspect && <Modal title={cardName(inspect)} onClose={() => setInspect(null)}>
         <div className="inspect-card"><CardFace size="lg" rank={inspect.rank} suit={inspect.suit} tapped={inspect.tapped} /></div>
-        <RankNotes rank={inspect.rank} />
+        {full ? <><p>Full rules · <a href="#/rules" target="_blank" rel="noopener">Rules reference</a></p><ul className="rank-notes">{view.legalActions.filter(a => a.cardId === inspect.id || a.cardIds?.includes(inspect.id)).map((a, i) => <li key={i}>{explainAction(a)}</li>)}</ul><p className="muted small">Available uses depend on timing, targets, protection and the selected mode. The action panel lists the currently authorized declarations.</p></> : <RankNotes rank={inspect.rank} />}
       </Modal>}
       {gy && <Modal title={`Graveyard · ${view.graveyard.length} cards (newest last)`} onClose={() => setGy(false)} wide><div className="browse-grid">{view.graveyard.map(c => <CardFace key={c.id} size="sm" rank={c.rank} suit={c.suit} />)}</div></Modal>}
+      {exileOpen && <Modal title={`Exile · ${view.exile?.length ?? 0} cards (newest last)`} onClose={() => setExileOpen(false)} wide><div className="browse-grid">{view.exile?.map(c => <CardFace key={c.id} size="sm" rank={c.rank} suit={c.suit} />)}</div></Modal>}
       {why && <Modal title="Why can / can’t I?" onClose={() => setWhy(null)}><ul className="why-list">{why.map((w, i) => <li key={i}>{w}</li>)}</ul></Modal>}
     </div>
   );

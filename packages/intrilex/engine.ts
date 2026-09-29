@@ -33,6 +33,12 @@ export function shuffle<T>(a: T[], random: Random): T[] {
 }
 
 interface G { s: GameState; random: Random }
+const full = (s: GameState) => s.profile === 'intrilex-full';
+const sources = (i: StackItem) => [...(i.card ? [i.card] : []), ...(i.cards ?? [])];
+const protectedCard = (c: GameCard) => c.aegis !== undefined;
+function aegis(s: GameState, c: GameCard, p: number) { if (c.rank !== '9') c.aegis = p; }
+function gainMini(s: GameState, n: number) { const gain = Math.min(n, 3 - (s.miniTurnsGranted ?? 1)); s.miniTurns += gain; s.miniTurnsGranted = (s.miniTurnsGranted ?? 1) + gain; }
+function spendMini(s: GameState) { s.miniTurns--; if (full(s)) s.miniTurnsUsed = (s.miniTurnsUsed ?? 0) + 1; }
 
 // ---------------------------------------------------------------- card bookkeeping
 
@@ -40,7 +46,8 @@ interface G { s: GameState; random: Random }
 export function everyCard(s: GameState): GameCard[] {
   return [
     ...s.players.flatMap(p => [...p.hand, ...p.pr, ...p.er]), ...s.deck, ...s.graveyard,
-    ...s.stack.flatMap(i => (i.card ? [i.card] : [])), ...(s.choice?.held ? s.choice.cards : []), ...s.suspended.map(x => x.card),
+    ...(s.exile ?? []), ...(s.swapBar ?? []).map(x => x.card),
+    ...s.stack.flatMap(sources), ...(s.choice?.held ? s.choice.cards : []), ...s.suspended.flatMap(x => [...(x.card ? [x.card] : []), ...(x.task?.held ? x.task.cards : [])]),
   ];
 }
 
@@ -51,10 +58,11 @@ function newId(g: G): string {
     if (!taken.has(id)) return id;
   }
 }
-const clean = (c: GameCard) => { delete c.tapped; delete c.hostId; c.owner = -1; };
-function toHand(g: G, p: number, c: GameCard) { clean(c); c.id = newId(g); g.s.players[p]!.hand.push(c); }
+const clean = (c: GameCard) => { delete c.tapped; delete c.hostId; delete c.aegis; delete c.tapUntil; delete c.revealed; delete c.holdCast; delete c.playedForEffect; };
+function toHand(g: G, p: number, c: GameCard, revealed = false) { clean(c); if (c.owner < 0) c.owner = p; c.id = newId(g); if (full(g.s) && revealed) c.revealed = p; g.s.players[p]!.hand.push(c); }
 function toDeck(g: G, c: GameCard, where: 'top' | 'bottom') { clean(c); c.id = newId(g); if (where === 'top') g.s.deck.unshift(c); else g.s.deck.push(c); }
-function toGraveyard(g: G, c: GameCard) { clean(c); g.s.graveyard.push(c); }
+function toGraveyard(g: G, c: GameCard) { clean(c); if (full(g.s) && (c.exileBound || c.wildBound)) { delete c.wildBound; g.s.exile!.push(c); } else g.s.graveyard.push(c); }
+function toExile(g: G, c: GameCard) { clean(c); delete c.wildBound; g.s.exile!.push(c); }
 function takeFromHand(g: G, p: number, id: string | undefined): GameCard {
   const hand = g.s.players[p]!.hand;
   const i = hand.findIndex(c => c.id === id);
@@ -99,6 +107,7 @@ export function outranks(a: GameCard, b: GameCard): boolean {
  * PR immunity is active PR text, so a tapped 4/8 loses it (§9).
  */
 function effectTargetable(s: GameState, caster: number, l: Located): boolean {
+  if (full(s) && protectedCard(l.card)) return false;
   if (l.row === 'pr' && !l.card.tapped && (l.card.rank === '4' || l.card.rank === '8')) return false;
   if (l.player !== caster && guarded(s, l.player, l.card)) return false;
   return true;
@@ -106,7 +115,7 @@ function effectTargetable(s: GameState, caster: number, l: Located): boolean {
 const jackImmune = (c: GameCard) => !c.tapped && (c.rank === 'A' || c.rank === 'RJ' || c.rank === 'BJ');
 const scuttleImmune = (c: GameCard) => !c.tapped && (c.rank === 'A' || c.rank === '5' || c.rank === 'RJ' || c.rank === 'BJ');
 export function canScuttle(s: GameState, p: number, source: GameCard, l: Located | undefined): boolean {
-  return !!l && l.row === 'pr' && l.player !== p && !scuttleImmune(l.card) && outranks(source, l.card);
+  return !!l && l.row === 'pr' && l.player !== p && !protectedCard(l.card) && !scuttleImmune(l.card) && outranks(source, l.card);
 }
 const jackable = (s: GameState, p: number, l: Located | undefined) => !!l && l.row === 'pr' && l.player !== p && !jackImmune(l.card) && effectTargetable(s, p, l);
 const purgeable = (s: GameState, p: number, l: Located | undefined) => !!l && l.row === 'er' && l.player !== p && isAnchor(l.card) && effectTargetable(s, p, l);
@@ -146,11 +155,33 @@ const MODES: Record<string, ModeInfo> = {
   'shuffle-reset': { rule: 'RJ.modes', cls: 'effect', timing: 'ordinary', text: 'Shuffle Reset: DP + GY, then draw 2' },
   'board-lock': { rule: 'BJ.lock', cls: 'effect', timing: 'quick', text: 'Quick: Board Lock' },
 };
-export const modeInfo = (mode: string | undefined) => (mode ? MODES[mode] : undefined);
+const FULL_MODES: [string, string, Timing, PendingClass?][] = [
+  ['purge-aegis', 'Purge: Scrap an Aegised card', 'ordinary'], ['total-clear', 'Total Clear: all OTT', 'ordinary'],
+  ['raid-spade', 'Enhanced Raid: opponent presents two; play one', 'ordinary'], ['seven-spade', 'Topdeck: reveal three, take one, play one', 'ordinary'],
+  ['deep-draw', 'Deep Draw: discard one or two, draw six', 'ordinary'], ['exile-rummage', 'Rummage one suit-range Exile card', 'ordinary'],
+  ['peek', 'Peek at face-down Swap Bar cards', 'quick'], ['aegis-field', 'Aegis Field: protect your OTT', 'quick'],
+  ['queen-aegis', 'Queen Quick: protect one friendly card', 'quick'], ['free-scuttle', 'Free Scuttle', 'instant', 'scuttle'],
+  ['goal5-spade', 'Opponent Goal +5; your Goal −2; discard one', 'instant', 'goal'], ['attach-er', 'Jack an enemy Anchor', 'ordinary'],
+  ['tempo', 'Gain two Mini-Turns; draw one', 'ordinary'], ['exile-recovery', 'Recover one Exile card revealed', 'ordinary'],
+  ['theft', 'Stack Theft', 'instant'], ['court', 'Queen’s Court: anchor two Queens', 'ordinary', 'anchor'],
+  ['marriage', 'Royal Marriage: anchor matching King and Queen', 'ordinary', 'anchor'],
+  ['super-2-score', 'Commandeer: score enemy OTT card', 'ordinary'], ['super-2-hold', 'Commandeer: hold enemy OTT card', 'ordinary'],
+  ['super-3-raid', 'Super Raid: take two presented cards', 'ordinary'], ['super-3-discard', 'Super Raid: opponent discards down to two', 'ordinary'],
+  ['super-4-pr', 'Exchange Point Rows', 'ordinary'], ['super-4-er', 'Exchange Enduring Rows', 'ordinary'],
+  ['super-5', 'Super Recycle: mill three; play one', 'ordinary'], ['super-6', 'Super Dig: draw seven; keep four', 'ordinary'],
+  ['super-7', 'Sequential Topdeck Casting', 'ordinary'], ['super-8', 'Absolute Scuttle', 'ordinary', 'scuttle'],
+  ['super-J', 'Tempo Force: gain two Mini-Turns', 'ordinary'], ['super-A', 'Super Counter', 'instant', 'counter'],
+  ['ultra-red', 'Three Red: Super Counter; oldest GY draw', 'instant', 'counter'],
+  ['ultra-black', 'Three Black: score, cast, Exile', 'ordinary'], ['ultra-mixed-draw', 'Mixed Ultra: two Mini-Turns; draw two', 'ordinary'],
+  ['ultra-mixed-exile', 'Mixed Ultra: two Mini-Turns; rummage Exile', 'ordinary'], ['sudden', 'Activate Sudden Death', 'ordinary'],
+];
+for (const [key, text, timing, cls] of FULL_MODES) MODES[key] = {text, timing, cls: cls ?? 'effect', rule: `full.${key}`};
+function infoFor(mode: string | undefined): ModeInfo | undefined { return mode ? MODES[mode.split(':').at(-1)!] : undefined; }
+export const modeInfo = infoFor;
 
 const act = (type: ActionType, label: string, ruleRef: string, extra: Partial<GameAction> = {}): GameAction => ({ type, label, ruleRef, ...extra });
 function effect(c: GameCard, mode: string, target?: Located | StackItem, type: ActionType = 'effect'): GameAction {
-  const m = MODES[mode]!;
+  const m = infoFor(mode)!;
   const tl = target ? ('card' in target && 'row' in target ? ` → ${cardName(target.card)}` : ` → ${(target as StackItem).action.label}`) : '';
   return act(type, `${cardName(c)} · ${m.text}${tl}`, m.rule, { cardId: c.id, mode, ...(target ? { targetId: 'row' in target ? target.card.id : target.id } : {}) });
 }
@@ -174,11 +205,103 @@ function ordinaryModes(s: GameState, p: number, c: GameCard, type: ActionType = 
     case 'RJ': for (const m of ['hand-swap', 'self-reset', 'attack', 'shuffle-reset']) out.push(effect(c, m, undefined, type)); break;
     default: break; // 2 (Solo Wild needs suit matching), 8, 10 (suit effects), BJ (Quick only): no ordinary First Contact effect.
   }
+  if (full(s)) return fullOrdinary(s, p, c, type, out);
+  return out;
+}
+function exileRange(s: GameState, suit: Suit): GameCard[] {
+  const ex = s.exile ?? [];
+  return suit === '♣' ? ex.slice(-2) : suit === '♥' ? ex.slice(0, 2) : suit === '♦' ? ex.length >= 5 ? ex.slice(2, -2) : [] : ex;
+}
+function fullOrdinary(s: GameState, p: number, c: GameCard, type: ActionType, generic: GameAction[]): GameAction[] {
+  let out = generic;
+  const add = (m: string, targetId?: string) => out.push({...effect(c, m, undefined, type), ...(targetId ? {targetId} : {})});
+  if (c.rank === 'A' && onTable(s).some(l => protectedCard(l.card))) {
+    out = out.filter(a => a.mode !== 'purge');
+    for (const l of onTable(s)) if (protectedCard(l.card)) add('purge-aegis', l.card.id);
+  }
+  if (c.suit === '♠') {
+    if (c.rank === '3') { out = out.filter(a => a.mode !== 'raid'); add('raid-spade'); }
+    if (c.rank === '4') { out = out.filter(a => !a.mode?.startsWith('clear-')); add('total-clear'); }
+    if (c.rank === '6') { out = out.filter(a => a.mode !== 'dig'); if (s.players[p]!.hand.some(h => h.id !== c.id)) {
+      for (const cost of combinations(s.players[p]!.hand.filter(h => h.id !== c.id), 1).concat(combinations(s.players[p]!.hand.filter(h => h.id !== c.id), 2))) out.push({...effect(c, 'deep-draw', undefined, type), targetIds: cost.map(x => x.id)});
+    } }
+    if (c.rank === '7') { out = out.filter(a => a.mode !== 'seven'); add('seven-spade'); }
+    if (c.rank === 'J') for (const l of onTable(s)) if (l.player !== p && l.row === 'er' && isAnchor(l.card) && !onTable(s).some(x => x.card.hostId === l.card.id) && effectTargetable(s,p,l)) add('attach-er',l.card.id);
+  }
+  if (c.rank === '5') for (const x of exileRange(s,c.suit)) add('exile-rummage',x.id);
+  if (c.rank === '10' && !s.players[p]!.tenUsed) {
+    if (c.suit === '♥') add('tempo');
+    if (c.suit === '♠') for (const x of s.exile!) add('exile-recovery',x.id);
+    if (c.suit === '♦') for (const rank of ['3','4','5','6','7']) out.push(...superModes(s,p,[c],rank,false,type).map(a=>({...a,mode:`mimic:${a.mode}`})));
+  }
+  if (c.rank === '10' && s.players[p]!.tenUsed) return [];
+  if (c.rank === '2' || c.rank === 'K' && c.suit === '♠') {
+    for (const rank of ['3','4','5','6','7'] as Rank[]) {
+      const proxy = {...c,rank};
+      for (const a of ordinaryModes(s,p,proxy,type).filter(x=>!x.mode?.startsWith('anchor'))) {
+        if (c.rank === 'K' && rank === '4') {
+          for (const cost of s.players[p]!.hand.filter(x=>x.id!==c.id)) out.push({...a, mode:`wild-${rank}:${a.mode}`,targetIds:[cost.id],label:`K♠ Wild Sovereignty · ${a.label}`});
+        } else out.push({...a,mode:`wild-${rank}:${a.mode}`,label:`${cardName(c)} Wild copy · ${a.label}`});
+      }
+    }
+  }
+  return out;
+}
+function combinations<T>(items: T[], n: number): T[][] {
+  const out:T[][]=[];
+  const walk=(start:number, chosen:T[])=>{if(chosen.length===n){out.push(chosen);return;} for(let i=start;i<=items.length-(n-chosen.length);i++) walk(i+1,[...chosen,items[i]!]);};
+  walk(0,[]);return out;
+}
+function superModes(s:GameState,p:number, cards:GameCard[],rank:string,response:boolean,type:ActionType='effect'):GameAction[] {
+  const make=(mode:string,targetId?:string):GameAction=>({...effect(cards[0]!,mode,undefined,type),cardIds:cards.map(c=>c.id),...(targetId?{targetId}:{}),label:`${cards.map(cardName).join(' + ')} · ${infoFor(mode)!.text}`});
+  if(rank==='A') return response?s.stack.filter(i=>superCan(s,p,i)).map(i=>({...make('super-A',i.id),type:'counter'})):[];
+  if(response||s.boardLock)return [];
+  if(rank==='2')return onTable(s).filter(l=>l.player!==p&&!protectedCard(l.card)).flatMap(l=>[make('super-2-score',l.card.id),make('super-2-hold',l.card.id)]);
+  if(rank==='3')return [make('super-3-raid'),make('super-3-discard')];
+  if(rank==='4')return [make('super-4-pr'),make('super-4-er')];
+  if(['5','6','7','J'].includes(rank))return [make(`super-${rank}`)];
+  if(rank==='8')return s.players[opp(p)]!.pr.filter(c=>!protectedCard(c)).map(c=>make('super-8',c.id));
+  return [];
+}
+function superCan(s:GameState,p:number,i:StackItem):boolean {
+  if (i.player!==p && s.players[i.player]!.er.filter(c=>c.rank==='Q'&&!c.tapped).length>=2) return false;
+  return i.cls==='effect'||i.cls==='counter'||i.tier==='ultra'||i.tier==='sudden';
+}
+function compositeActions(s:GameState,p:number,response:boolean):GameAction[] {
+  const hand=s.players[p]!.hand,out:GameAction[]=[];
+  const add=(cards:GameCard[],mode:string,targetId?:string,type:ActionType='effect')=>out.push({...effect(cards[0]!,mode),type,cardIds:cards.map(c=>c.id),...(targetId?{targetId}:{}),label:`${cards.map(cardName).join(' + ')} · ${infoFor(mode)!.text}`});
+  for(const pair of combinations(hand,2)) {
+    const [a,b]=pair as [GameCard,GameCard];
+    const rank=a.rank===b.rank?a.rank:a.rank==='2'&&a.suit===b.suit&&['3','4','5','6','7'].includes(b.rank)?b.rank:b.rank==='2'&&a.suit===b.suit&&['3','4','5','6','7'].includes(a.rank)?a.rank:null;
+    if(rank)out.push(...superModes(s,p,pair,rank,response));
+    if(!s.players[p]!.tenUsed&&pair.some(c=>c.rank==='10'&&c.suit==='♦')&&pair.some(c=>c.rank==='2'))for(const r of ['A','3','4','5','6','7','8','J'])out.push(...superModes(s,p,[...pair].sort(c=>c.rank==='10'?-1:1),r,response).map(a=>({...a,mode:`mimic:${a.mode}`})));
+    if(!response&&!s.boardLock) {
+      if(a.rank==='Q'&&b.rank==='Q'&&!s.players[p]!.courtUsed)add(pair,'court');
+      if(a.suit===b.suit&&[a.rank,b.rank].sort().join()==='K,Q')add(pair,'marriage');
+      if([a.rank,b.rank].sort().join()==='BJ,RJ')for(const l of onTable(s))if(l.player!==p&&effectTargetable(s,p,l))add(pair,'sudden',l.card.id);
+    }
+  }
+  if(!response&&!s.boardLock)for(const r of RANKS) {const cards=hand.filter(c=>c.rank===r);if(cards.length===4)for(const l of onTable(s))if(l.player!==p&&effectTargetable(s,p,l))add(cards,'sudden',l.card.id);}
+  if(!s.players[p]!.ultraUsed) {
+    const black=hand.filter(c=>['♣','♠'].includes(c.suit)),red=hand.filter(c=>['♦','♥'].includes(c.suit));
+    if(response)for(const cards of combinations(red,3))for(const i of s.stack)if(superCan(s,p,i))add(cards,'ultra-red',i.id,'counter');
+    if(!response&&!s.boardLock) {
+      for(const cards of combinations(black,3))for(const score of cards)for(const cast of cards.filter(c=>c!==score)) {
+        for(const a of ordinaryModes(s,p,cast).filter(a=>infoFor(a.mode)?.cls==='effect')) out.push({...a,mode:`ultra-black:${a.mode}`,cardId:score.id,cardIds:[score.id,cast.id,cards.find(c=>c!==score&&c!==cast)!.id],label:`3 Black · score ${cardName(score)}; cast ${a.label}; Exile third`});
+      }
+      for(const b of combinations(black,2))for(const r of combinations(red,2)){add([...b,...r],'ultra-mixed-draw');for(const x of s.exile!)add([...b,...r],'ultra-mixed-exile',x.id);if(!s.exile!.length)add([...b,...r],'ultra-mixed-exile');}
+    }
+  }
   return out;
 }
 /** Quick plays: own Full Turn only (§4.4). Board Lock additionally needs an open state (§26 BJ). */
 function quickModes(s: GameState, p: number, c: GameCard, open: boolean): GameAction[] {
   if (s.boardLock || p !== s.activePlayer) return [];
+  if (full(s)) {
+    if(c.rank==='6'&&s.swapBar!.some(x=>!x.faceUp))return [effect(c,'peek')];
+    if(c.rank==='8')return [effect(c,'aegis-field')];
+    if(c.rank==='Q'&&!s.players[p]!.quickQUsed&&!s.stack.some(i=>i.player===p&&i.action.mode==='queen-aegis'))return onTable(s).filter(l=>l.player===p&&l.card.rank!=='9'&&!protectedCard(l.card)).map(l=>effect(c,'queen-aegis',l));
+  }
   if (c.rank === '2' && !s.players[p]!.quick2Used && !s.stack.some(i => i.player === p && i.action.mode === 'quick2')) return [effect(c, 'quick2')];
   if (c.rank === '4') return [effect(c, 'natural')];
   if (c.rank === 'BJ' && open) return [effect(c, 'board-lock')];
@@ -191,21 +314,27 @@ function instantModes(s: GameState, p: number, c: GameCard): GameAction[] {
   if (c.rank === '3') for (const l of onTable(s)) if (bounceable(s, p, l)) out.push(effect(c, 'instant-top', l), effect(c, 'instant-bottom', l));
   if (c.rank === '9') { for (const l of onTable(s)) if (tappable(s, p, l)) out.push(effect(c, 'tap', l)); out.push(effect(c, 'goal3'), effect(c, 'goal5')); }
   if (c.rank === 'J') for (const item of s.stack) if (item.miniTurn && item.player !== p) out.push(effect(c, 'disrupt', item));
+  if(full(s)&&c.suit==='♠') {
+    if(c.rank==='8')for(const l of onTable(s))if(l.player!==p&&l.row==='pr'&&!protectedCard(l.card)&&!scuttleImmune(l.card))out.push(effect(c,'free-scuttle',l));
+    if(c.rank==='9')out.push(effect(c,'goal5-spade'));
+    if(c.rank==='10'&&!s.players[p]!.tenUsed)for(const i of s.stack)if(i.cls==='effect'&&!i.tier&&sources(i).length===1)out.push(effect(c,'theft',i));
+  }
   return out;
 }
 /** §7 / §36 16.1 counter authority restricted to what exists in First Contact. */
 function counterActions(s: GameState, p: number): GameAction[] {
   const out: GameAction[] = [];
   const pl = s.players[p]!;
-  const aceCan = (i: StackItem) => (i.cls === 'effect' || i.cls === 'counter') && i.action.mode !== 'board-lock' && i.action.mode !== 'shuffle-reset';
+  const aceCan = (i: StackItem) => (i.cls === 'effect' || i.cls === 'counter') && i.action.mode !== 'board-lock' && i.action.mode !== 'shuffle-reset' && i.tier!=='ultra'&&i.tier!=='sudden'&&i.action.mode!=='exile-counter';
   const add = (c: GameCard, i: StackItem, mode: 'counter' | 'anchor-counter', rule: string) =>
     out.push(act('counter', `${cardName(c)} · ${mode === 'anchor-counter' ? 'Sacrifice Anchor Ace to counter' : 'Counter'} “${i.action.label}”`, rule, { cardId: c.id, targetId: i.id, mode }));
   for (const c of pl.hand) for (const i of s.stack) {
-    if (c.rank === 'A' && aceCan(i)) add(c, i, 'counter', 'A.counter');
-    if (c.rank === 'K' && (i.cls === 'anchor' || i.cls === 'goal')) add(c, i, 'counter', 'K.counter');
+    if (c.rank === 'A' && aceCan(i)&&(!full(s)||!i.shield||i.player===p||c.suit==='♠')) { add(c, i, 'counter', 'A.counter'); if(full(s)&&c.suit==='♠')out[out.length-1]!.mode='exile-counter'; }
+    if (c.rank === 'K' && (!full(s) ? i.cls === 'anchor' || i.cls === 'goal' : c.suit==='♠'?sources(i).length>1&&i.tier!=='ultra'&&i.tier!=='sudden':sources(i).length===1&&(i.cls==='anchor'||i.cls==='goal'))) add(c, i, 'counter', 'K.counter');
     if (c.rank === '8' && i.cls === 'scuttle') add(c, i, 'counter', '8.counter');
   }
-  for (const c of pl.er) if (c.rank === 'A' && !c.tapped && isAnchor(c)) for (const i of s.stack) if (i.player !== p && aceCan(i)) add(c, i, 'anchor-counter', 'A.anchor');
+  for (const c of pl.er) if (c.rank === 'A' && !c.tapped && !protectedCard(c) && isAnchor(c)) for (const i of s.stack) if (i.player !== p && aceCan(i)&&(!full(s)||!i.shield)) add(c, i, 'anchor-counter', 'A.anchor');
+  if(full(s))out.push(...compositeActions(s,p,true));
   return out;
 }
 export function responseActions(s: GameState, p: number): GameAction[] {
@@ -218,6 +347,13 @@ function ordinaryActions(s: GameState, p: number): GameAction[] {
   const out: GameAction[] = [];
   // §22 10.2: Draw is undeclarable only while Exhausted is active with an empty DP.
   if (!(s.exhausted !== null && !s.deck.length)) out.push(act('draw', pl.hand.length ? 'Draw 1' : 'Draw 2 (your hand is empty)', 'action.draw'));
+  if(full(s)) {
+    if(!(s.exhausted!==null&&!s.deck.length)) {
+      if(!pl.swapUsed)for(const [slot,x] of s.swapBar!.entries())if(x.faceUp)out.push(act('swap-draw',`Take ${cardName(x.card)} from Swap Bar`,'full.swap',{mode:String(slot)}));
+      if(!s.boardLock&&!(s.miniTurnsUsed??0))out.push(act('draw-cast','Draw & Cast','full.draw-cast'));
+    }
+    out.push(...compositeActions(s,p,false));
+  }
   for (const c of pl.hand) {
     out.push(act('score', `Score ${cardName(c)} for ${POINTS[c.rank]} Points`, c.rank === '7' ? '7.trigger' : c.rank === 'BJ' ? 'BJ.score' : 'action.score', { cardId: c.id }));
     out.push(...ordinaryModes(s, p, c));
@@ -225,7 +361,7 @@ function ordinaryActions(s: GameState, p: number): GameAction[] {
   }
   return out;
 }
-const miniTurnOf = (a: GameAction): MiniTurnType | undefined => (a.type === 'draw' || a.type === 'score' || a.type === 'scuttle' ? a.type : a.type === 'effect' && MODES[a.mode ?? '']?.timing === 'ordinary' ? 'effect' : undefined);
+const miniTurnOf = (a: GameAction): MiniTurnType | undefined => (['draw','score','scuttle','swap-draw','draw-cast'].includes(a.type) ? a.type as MiniTurnType : a.type === 'effect' && infoFor(a.mode)?.timing === 'ordinary' ? 'effect' : undefined);
 
 export function availableActions(s: GameState, p: number): GameAction[] {
   if ((p !== 0 && p !== 1) || s.winner !== null) return [];
@@ -237,6 +373,13 @@ export function availableActions(s: GameState, p: number): GameAction[] {
   }
   if (p !== s.activePlayer) return [];
   const out = s.players[p]!.hand.flatMap(c => quickModes(s, p, c, true));
+  if(full(s)&&s.phase==='start') {
+    out.push(act('start-action','Finish Start · begin Action Phase','full.start'));
+    if(!s.players[p]!.swapUsed)for(const [slot,x] of s.swapBar!.entries())if(!x.faceUp)out.push(act('swap-down',`Swap face-down slot ${slot+1}`,'full.swap',{mode:String(slot)}));
+    for(const rank of s.voltage??[])out.push(act('voltage',`Voltage ${rank}`,'full.voltage',{mode:String(rank)}));
+    for(const c of [...s.players[p]!.pr,...s.players[p]!.er])if(c.holdCast===p&&!protectedCard(c))for(const a of ordinaryModes(s,p,c))out.push({...a,type:'generated-effect',mode:`hold:${a.mode}`});
+    return out;
+  }
   if (s.miniTurns > 0) {
     const ordinary = ordinaryActions(s, p);
     // §26 J Disrupt: a disrupted Action type may be repeated only when no different Action is legal.
@@ -247,12 +390,50 @@ export function availableActions(s: GameState, p: number): GameAction[] {
   return out;
 }
 
+/** Full-profile multi-step choices dispatched by `q.data.mode` (§24 Voltage, §26 Six peek, Five Exile, Super-5, Foundation, BJ recycle, etc.). */
+function fullChoices(s: GameState, p: number, q: Choice): GameAction[] {
+  const out: GameAction[] = [];
+  const pick = (mode: string, label: string, cardId?: string, rule = 'full.choice') => out.push(act('choose', label, rule, { mode, ...(cardId ? { cardId } : {}) }));
+  const mode = q.data.mode as string | undefined;
+  switch (mode) {
+    case 'foundation':
+      for (const c of s.players[p]!.hand) pick('foundation-score', `Score ${cardName(c)} for ${POINTS[c.rank]} Points (Foundation)`, c.id, 'full.foundation');
+      pick('foundation-skip', 'Skip the Foundation bonus', undefined, 'full.foundation');
+      break;
+    case 'bj-recycle':
+      for (const c of q.cards) if (s.exile!.some(x => x.id === c.id)) pick('bj-take', `Move ${cardName(c)} to the top of DP`, c.id, 'full.bj-recycle');
+      pick('bj-done', 'Finish Exile Recycle', undefined, 'full.bj-recycle');
+      break;
+    case 'voltage-4':
+      for (const r of ['A','2','3','4','5','6','7','8','9','10','J','Q','K'] as Rank[]) pick('voltage-guess', `Guess ${r}`, undefined, 'full.voltage');
+      break;
+    case 'peek':
+      for (const c of q.cards) pick('peek-take', `Take ${cardName(c)} into hand`, c.id, 'full.peek');
+      pick('peek-effect', 'Play one as an effect-only generated card', undefined, 'full.peek');
+      break;
+    case 'exile-rummage':
+      for (const c of q.cards) pick('exile-take', `Rummage ${cardName(c)} from Exile`, c.id, 'full.exile');
+      break;
+    case 'super-5':
+      for (const c of q.cards) pick('super-5-play', `Play ${cardName(c)}`, c.id, 'full.super-5');
+      break;
+    case 'theft':
+      for (const id of (q.data.targets as string[] | undefined) ?? []) pick('theft-target', `Steal “${s.stack.find(i => i.id === id)?.action.label ?? id}”`, undefined, 'full.theft');
+      break;
+    default:
+      pick('full-pass', 'Continue', undefined, 'full.choice');
+      break;
+  }
+  return out;
+}
+
 function choiceActions(s: GameState, p: number): GameAction[] {
   const q = s.choice!;
   const out: GameAction[] = [];
   const pick = (mode: string, label: string, cardId?: string, rule = 'stack') => out.push(act('choose', label, rule, { mode, ...(cardId ? { cardId } : {}) }));
   const hand = s.players[p]!.hand;
   switch (q.kind) {
+    case 'full': return fullChoices(s,p,q);
     case 'discard': for (const c of q.cards) if (hand.some(h => h.id === c.id)) pick('select', `Discard ${cardName(c)}`, c.id); break;
     case 'present': for (const c of q.cards) if (hand.some(h => h.id === c.id)) pick('select', `Present ${cardName(c)}`, c.id, '3.base'); break;
     case 'raid-take': for (const c of q.cards) pick('select', `Take ${cardName(c)}`, c.id, '3.base'); break;
@@ -267,8 +448,13 @@ function choiceActions(s: GameState, p: number): GameAction[] {
     case 'seven-single': pick('take', `Take ${cardName(q.cards[0]!)} into hand`, undefined, '7.base'); pick('play', `Play ${cardName(q.cards[0]!)} now`, undefined, '7.base'); break;
     case 'generated': {
       const c = q.cards[0]!;
-      pick('generated-score', `Score ${cardName(c)} for ${POINTS[c.rank]} Points`, c.id, c.rank === '7' ? '7.trigger' : '7.base');
-      out.push(...ordinaryModes(s, p, c, 'generated-effect'));
+      if(!q.data.effectOnly)pick('generated-score', `Score ${cardName(c)} for ${POINTS[c.rank]} Points`, c.id, c.rank === '7' ? '7.trigger' : '7.base');
+      out.push(...ordinaryModes(s, p, c, 'generated-effect').filter(a=>!q.data.topdeck||c.rank==='7'||!a.mode?.endsWith('seven')&&!a.mode?.endsWith('seven-spade')));
+      if(full(s)&&!q.data.effectOnly) {
+        const copy=structuredClone(s);copy.players[p]!.hand.push(c);
+        out.push(...compositeActions(copy,p,false).filter(a=>a.cardIds?.includes(c.id)&&a.mode!=='court'&&(!q.data.topdeck||c.rank==='7'||!a.mode?.endsWith('super-7')&&!a.mode?.endsWith('seven')&&!a.mode?.endsWith('seven-spade'))).map(a=>({...a,type:'generated-effect' as const})));
+      }
+      if(!out.length)pick('generated-scrap',`Scrap ${cardName(c)}: no legal effect`,c.id,'full.generated');
       break;
     }
     case 'seven-score': for (const c of q.cards) pick('select', `Take ${cardName(c)} into hand`, c.id, '7.trigger'); break;
@@ -285,7 +471,7 @@ function choiceActions(s: GameState, p: number): GameAction[] {
 
 // ---------------------------------------------------------------- setup
 
-export interface CreateOptions { random?: Random; firstPlayer?: number }
+export interface CreateOptions { random?: Random; firstPlayer?: number; profile?: 'intrilex-first-contact' | 'intrilex-full' }
 function emptyState(): GameState {
   return {
     version: 2, profile: 'intrilex-first-contact',
@@ -307,10 +493,16 @@ export function createGame(options: CreateOptions = {}): GameState {
   shuffle(g.s.deck, random);
   const first = options.firstPlayer ?? (random() < 0.5 ? 0 : 1);
   if (first !== 0 && first !== 1) fail('INVALID_SETUP', 'First player must be 0 or 1.');
+  if (options.profile === 'intrilex-full') {
+    Object.assign(g.s,{version:3,profile:options.profile,exile:[],swapBar:[],suddenDeath:null,miniTurnsGranted:1,miniTurnsUsed:0,voltage:[],phase:'start'});
+    g.s.players[0]!.goal = 21; g.s.players[1]!.goal = 21;
+  }
   for (let i = 0; i < 5; i++) toHand(g, first, g.s.deck.shift()!);
   for (let i = 0; i < 6; i++) toHand(g, opp(first), g.s.deck.shift()!);
+  if (full(g.s))for(const faceUp of [false,false,true]){const card=g.s.deck.shift()!;card.id=newId(g);g.s.swapBar!.push({card,faceUp});}
   g.s.activePlayer = first; g.s.priority = first;
-  log(g, `First Contact: 54 cards, Goal 15. ${P(first)} is Player A (5 cards) and goes first; ${P(opp(first))} has 6.`);
+  if (full(g.s)) log(g, `Intrilex Full: 54 cards, Goal 21. ${P(first)} is Player A (5 cards) and goes first; ${P(opp(first))} has 6. Swap Bar: two face-down, one face-up.`);
+  else log(g, `First Contact: 54 cards, Goal 15. ${P(first)} is Player A (5 cards) and goes first; ${P(opp(first))} has 6.`);
   return g.s;
 }
 
@@ -349,17 +541,48 @@ function perform(g: G, p: number, a: GameAction) {
     case 'decline': s.passes++; s.priority = opp(s.priority); return;
     case 'end': endTurn(g); return;
     case 'exhausted-pass': s.miniTurns = 0; log(g, `${P(p)} takes the forced Exhausted Pass.`); event(g, { t: 'pass', p }); return;
+    case 'start-action': s.phase = 'action'; log(g, `${P(p)} begins the Action Phase.`); return;
+    case 'voltage': { s.voltage = (s.voltage ?? []).filter(r => r !== Number(a.mode)); log(g, `${P(p)} takes a Voltage ${a.mode} snapshot.`); return; }
+    case 'swap-down': {
+      const slot = Number(a.mode);
+      const entry = s.swapBar![slot]!;
+      const taken = entry.card; entry.card = { ...taken }; entry.card.id = newId(g); entry.faceUp = false;
+      const returned = takeFromHand(g, p, a.cardId);
+      s.swapBar![slot]! = { card: returned, faceUp: true };
+      toHand(g, p, taken, true);
+      s.players[p]!.swapUsed = true;
+      log(g, `${P(p)} swaps a face-down Swap Bar card for ${cardName(returned)} (face-up).`);
+      return;
+    }
+    case 'swap-draw': {
+      spendMini(s);
+      const slot = Number(a.mode);
+      const entry = s.swapBar![slot]!;
+      s.swapBar!.splice(slot, 1);
+      toHand(g, p, entry.card, true);
+      s.players[p]!.swapUsed = true;
+      log(g, `${P(p)} takes ${cardName(entry.card)} from the Swap Bar.`);
+      return;
+    }
+    case 'draw-cast': {
+      spendMini(s);
+      log(g, `${P(p)} declares Draw & Cast.`);
+      event(g, { t: 'declare', p, type: 'draw-cast', miniTurn: 'draw-cast' });
+      push(g, { player: p, cls: 'action', action: a, miniTurn: 'draw-cast', drawCount: 1 });
+      return;
+    }
     case 'counter': {
       let card: GameCard;
       if (a.mode === 'anchor-counter') { const pl = s.players[p]!; card = pl.er.splice(pl.er.findIndex(c => c.id === a.cardId), 1)[0]!; clean(card); }
       else card = takeFromHand(g, p, a.cardId);
+      const extra = (a.cardIds ?? []).filter(id => id !== a.cardId).map(id => takeFromHand(g, p, id));
       log(g, `${P(p)}: ${a.label}`);
       event(g, { t: 'declare', p, type: 'counter', mode: a.mode, rank: card.rank });
-      push(g, { player: p, cls: 'counter', action: a, card });
+      push(g, { player: p, cls: 'counter', action: a, card, ...(extra.length ? { cards: extra } : {}) });
       return;
     }
     case 'draw': {
-      s.miniTurns--;
+      spendMini(s);
       const drawCount = s.players[p]!.hand.length ? 1 : 2; // fixed at declaration (§4.3)
       log(g, `${P(p)} declares Draw.`);
       event(g, { t: 'declare', p, type: 'draw', miniTurn: 'draw' });
@@ -367,7 +590,7 @@ function perform(g: G, p: number, a: GameAction) {
       return;
     }
     case 'score': {
-      s.miniTurns--;
+      spendMini(s);
       const card = takeFromHand(g, p, a.cardId);
       log(g, `${P(p)} plays ${cardName(card)} for Points.`);
       event(g, { t: 'declare', p, type: 'score', miniTurn: 'score', rank: card.rank });
@@ -375,7 +598,7 @@ function perform(g: G, p: number, a: GameAction) {
       return;
     }
     case 'scuttle': {
-      s.miniTurns--;
+      spendMini(s);
       const card = takeFromHand(g, p, a.cardId);
       log(g, `${P(p)}: ${a.label}.`);
       event(g, { t: 'declare', p, type: 'scuttle', miniTurn: 'scuttle', rank: card.rank });
@@ -383,13 +606,14 @@ function perform(g: G, p: number, a: GameAction) {
       return;
     }
     case 'effect': {
-      const info = MODES[a.mode!]!;
+      const info = infoFor(a.mode)!;
       const ordinary = info.timing === 'ordinary';
-      if (ordinary) s.miniTurns--;
+      if (ordinary) spendMini(s);
       const card = takeFromHand(g, p, a.cardId);
+      const extra = (a.cardIds ?? []).filter(id => id !== a.cardId).map(id => takeFromHand(g, p, id));
       log(g, `${P(p)}: ${a.label}.`);
       event(g, { t: 'declare', p, type: 'effect', mode: a.mode, rank: card.rank, ...(ordinary ? { miniTurn: 'effect' as const } : {}) });
-      push(g, { player: p, cls: info.cls, action: a, card, ...(ordinary ? { miniTurn: 'effect' as const } : {}) });
+      push(g, { player: p, cls: info.cls, action: a, card, ...(extra.length ? { cards: extra } : {}), ...(ordinary ? { miniTurn: 'effect' as const } : {}) });
       return;
     }
   }
@@ -422,7 +646,11 @@ function suspend(g: G, card: GameCard) { g.s.suspended.push({ card, depth: g.s.s
 /** A paused source goes to GY once its choices and any generated child play have finished (§6 Child Plays). */
 function finishSuspended(g: G) {
   const s = g.s;
-  while (s.suspended.length && !s.choice && s.stack.length <= s.suspended.at(-1)!.depth) toGraveyard(g, s.suspended.pop()!.card);
+  while (s.suspended.length && !s.choice && s.stack.length <= s.suspended.at(-1)!.depth) {
+    const x = s.suspended.pop()!;
+    if (x.card) toGraveyard(g, x.card);
+    if (x.task) s.choice = x.task;
+  }
 }
 
 function setChoice(g: G, c: Omit<Choice, 'count'> & { count?: number }) {
@@ -444,24 +672,38 @@ function restoreHost(g: G, controller: number, hostId: string) {
   const host = pr.find(c => c.id === hostId);
   if (host && host.owner >= 0 && host.owner !== controller) { pr.splice(pr.indexOf(host), 1); g.s.players[host.owner]!.pr.push(host); }
 }
-/** §12: after any change, sever Jacks whose host is no longer in their controller's PR. */
+/** §12: after any change, sever Jacks whose host is no longer in their controller's PR or (J♠) ER. */
 function checkAttachments(g: G) {
   for (let p = 0; p < 2; p++) {
     const pl = g.s.players[p]!;
-    for (const j of [...pl.er]) if (j.hostId && !pl.pr.some(c => c.id === j.hostId)) {
+    for (const j of [...pl.er]) if (j.hostId && !pl.pr.some(c => c.id === j.hostId) && !pl.er.some(c => c !== j && c.id === j.hostId)) {
       pl.er.splice(pl.er.indexOf(j), 1); toGraveyard(g, j); log(g, `${P(p)}'s Jack lost its host and is Scrapped.`);
     }
     for (const c of [...pl.pr]) if (c.owner >= 0 && c.owner !== p && !pl.er.some(j => j.hostId === c.id)) { pl.pr.splice(pl.pr.indexOf(c), 1); g.s.players[c.owner]!.pr.push(c); }
+    for (const c of [...pl.er]) if (!c.hostId && c.owner >= 0 && c.owner !== p && !pl.er.some(j => j.hostId === c.id)) { pl.er.splice(pl.er.indexOf(c), 1); g.s.players[c.owner]!.er.push(c); }
   }
 }
 
 function scoreCard(g: G, p: number, c: GameCard) {
+  const s = g.s, pl = s.players[p]!;
+  const before = full(s) ? score(s, p) : 0;
   clean(c); c.owner = p;
-  g.s.players[p]!.pr.push(c);
+  pl.pr.push(c);
+  // §26 Nine: a controller's next Points score releases every card holding that tap condition.
+  if (full(s)) for (const x of [...pl.pr, ...pl.er]) if (x.tapUntil === 'score') { delete x.tapped; delete x.tapUntil; }
   event(g, { t: 'score', p, rank: c.rank });
   log(g, `${cardName(c)} enters ${P(p)}'s Point Row (${score(g.s, p)} secured).`);
   // §26 7 Scoring Trigger: uses the stack; a triggered ability, not a card play (no Ace authority).
   if (c.rank === '7') push(g, { player: p, cls: 'trigger', action: act('effect', 'Seven scoring trigger: reveal 2, take 1', '7.trigger', { mode: 'seven-trigger' }) });
+  if (full(s)) {
+    // §26 10♣ Foundation: protected entry; zero-point boards queue an optional free scoring trigger.
+    if (c.rank === '10' && c.suit === '♣') {
+      aegis(s, c, p);
+      if (before === 0 && pl.hand.length) push(g, { player: p, cls: 'trigger', action: act('effect', 'Foundation: you may score one hand card', 'full.foundation', { mode: 'foundation' }) });
+    }
+    // §26 BJ Exile Recycle trigger: optional, uses the stack, legal under Board Lock.
+    if (c.rank === 'BJ') push(g, { player: p, cls: 'trigger', action: act('effect', 'Black Joker Exile Recycle: move up to 2 Exile cards to the DP', 'full.bj-recycle', { mode: 'bj-recycle' }) });
+  }
 }
 
 function resolve(g: G, item: StackItem) {
@@ -471,21 +713,42 @@ function resolve(g: G, item: StackItem) {
   switch (item.cls) {
     case 'counter': {
       const i = s.stack.findIndex(x => x.id === a.targetId);
-      if (i < 0) { log(g, `${a.label} fizzles: its target is gone.`); event(g, { t: 'fizzle', p, mode: 'counter' }); suspend(g, c!); return; }
+      if (i < 0) { log(g, `${a.label} fizzles: its target is gone.`); event(g, { t: 'fizzle', p, mode: 'counter' }); suspend(g, c!); for (const x of item.cards ?? []) toGraveyard(g, x); return; }
       const negated = s.stack.splice(i, 1)[0]!;
       event(g, { t: 'countered', p: negated.player, by: p, mode: negated.action.mode ?? negated.action.type });
       log(g, `Countered: ${negated.action.label}.`);
       if (negated.card) { if (a.mode === 'anchor-counter') { toHand(g, p, negated.card); log(g, `${P(p)} takes the countered ${cardName(negated.card)} into hand.`); } else toGraveyard(g, negated.card); }
+      for (const x of negated.cards ?? []) toGraveyard(g, x); // composite sources are all scrapped
       suspend(g, c!);
+      for (const x of item.cards ?? []) toGraveyard(g, x); // composite counter sources are all scrapped
       return;
     }
     case 'action':
       if (item.miniTurn === 'draw') { const n = drawCards(g, p, item.drawCount ?? 1); log(g, `${P(p)} draws ${n} card${n === 1 ? '' : 's'}.`); }
+      else if (item.miniTurn === 'draw-cast') {
+        const n = drawCards(g, p, 1); log(g, `${P(p)} draws ${n} card${n === 1 ? '' : 's'} (Draw & Cast).`);
+        if (n && s.players[p]!.hand.length) {
+          const drawn = s.players[p]!.hand[s.players[p]!.hand.length - 1]!;
+          setChoice(g, { player: p, kind: 'generated', prompt: `Declare ${cardName(drawn)}: play a legal effect (no scoring).`, cards: [drawn], public: true, held: true, data: { effectOnly: 1, topdeck: 1 } });
+        }
+      }
       else if (c) scoreCard(g, p, c);
       return;
     case 'trigger': {
-      const revealed = s.deck.splice(0, 2);
-      if (revealed.length) { log(g, `Seven trigger reveals ${revealed.map(cardName).join(' and ')}.`); setChoice(g, { player: p, kind: 'seven-score', prompt: 'Seven scoring trigger: take one revealed card; the other returns to the top of DP.', cards: revealed, public: true, held: true, data: {} }); }
+      const m = a.mode;
+      if (m === 'seven-trigger') {
+        const revealed = s.deck.splice(0, 2);
+        if (revealed.length) { log(g, `Seven trigger reveals ${revealed.map(cardName).join(' and ')}.`); setChoice(g, { player: p, kind: 'seven-score', prompt: 'Seven scoring trigger: take one revealed card; the other returns to the top of DP.', cards: revealed, public: true, held: true, data: {} }); }
+        return;
+      }
+      if (m === 'foundation') {
+        if (s.players[p]!.hand.length) setChoice(g, { player: p, kind: 'full', prompt: 'Foundation: you may score one hand card for free.', cards: [], public: false, held: false, data: { mode: 'foundation' } });
+        return;
+      }
+      if (m === 'bj-recycle') {
+        if (s.exile!.length) setChoice(g, { player: p, kind: 'full', prompt: 'Black Joker Exile Recycle: move up to 2 Exile cards to the top of DP.', cards: s.exile!.slice(), public: true, held: false, data: { mode: 'bj-recycle' } });
+        return;
+      }
       return;
     }
     case 'scuttle': {
@@ -542,7 +805,8 @@ function resolveEffect(g: G, item: StackItem, p: number, enemy: number, c: GameC
     case 'anchor-A': case 'anchor-Q': case 'anchor-K': case 'anchor-9': {
       if (m === 'anchor-9') for (const n of [...s.players[p]!.er]) if (n.rank === '9' && isAnchor(n)) { removeFromBoard(g, n.id); toGraveyard(g, n); log(g, `${P(p)}'s previous Nine Anchor is Scrapped.`); }
       clean(c); c.owner = p; s.players[p]!.er.push(c);
-      log(g, `${cardName(c)} enters ${P(p)}'s Enduring Row${m === 'anchor-Q' ? ' — Guard is active' : ''}.`);
+      if (full(s) && m === 'anchor-Q') aegis(s, c, p); // §26 Queen: entry Aegis blocks effects until next Start
+      log(g, `${cardName(c)} enters ${P(p)}'s Enduring Row${m === 'anchor-Q' ? ' — Guard and Aegis are active' : ''}.`);
       if (m === 'anchor-9' && s.players[enemy]!.hand.length) {
         log(g, `${P(enemy)}'s hand is revealed: ${s.players[enemy]!.hand.map(cardName).join(', ')}.`);
         setChoice(g, { player: enemy, kind: 'discard', prompt: 'Nine Anchor revealed your hand: discard one card of your choice.', cards: s.players[enemy]!.hand.slice(), public: true, held: false, data: {} });
@@ -636,6 +900,218 @@ function resolveEffect(g: G, item: StackItem, p: number, enemy: number, c: GameC
       log(g, 'Board Lock is active: no non-counter Effects or Scuttles.');
       event(g, { t: 'board-lock', p });
       break;
+    // ---- Full-profile composite anchors ----
+    case 'court': {
+      s.players[p]!.courtUsed = true;
+      const queens = [c!, ...(item.cards ?? [])];
+      for (const q of queens) { clean(q); q.owner = p; aegis(s, q, p); s.players[p]!.er.push(q); }
+      log(g, `${P(p)} anchors ${queens.map(cardName).join(' and ')} via Queen's Court.`);
+      return;
+    }
+    case 'marriage': {
+      const cards = [c!, ...(item.cards ?? [])];
+      const queen = cards.find(x => x.rank === 'Q')!, king = cards.find(x => x.rank === 'K')!;
+      for (const x of cards) { clean(x); x.owner = p; if (x.rank === 'Q') aegis(s, x, p); s.players[p]!.er.push(x); }
+      log(g, `${P(p)} anchors ${cardName(king)} and ${cardName(queen)} via Royal Marriage.`);
+      return;
+    }
+    // ---- Full-profile Super modes ----
+    case 'super-2-score': {
+      const t = removeFromBoard(g, item.action.targetId!)!;
+      clean(t); t.owner = p; s.players[p]!.pr.push(t);
+      log(g, `${P(p)} commandeers ${cardName(t)} into their Point Row.`);
+      break;
+    }
+    case 'super-2-hold': {
+      const t = removeFromBoard(g, item.action.targetId!)!;
+      toHand(g, p, t, true);
+      log(g, `${P(p)} commandeers ${cardName(t)} into hand.`);
+      break;
+    }
+    case 'super-3-raid': {
+      if (s.players[enemy]!.hand.length) setChoice(g, { player: enemy, kind: 'present', prompt: 'Super Raid: present two cards; your opponent takes two.', cards: s.players[enemy]!.hand.slice(), count: 2, public: false, held: false, data: { caster: p, presented: [], super: 1 } });
+      break;
+    }
+    case 'super-3-discard': {
+      if (s.players[enemy]!.hand.length) setChoice(g, { player: enemy, kind: 'discard', prompt: 'Super Raid: discard down to two cards.', cards: s.players[enemy]!.hand.slice(), count: Math.max(0, s.players[enemy]!.hand.length - 2), public: false, held: false, data: {} });
+      break;
+    }
+    case 'super-4-pr': {
+      const a2 = s.players[p]!.pr, b2 = s.players[enemy]!.pr;
+      s.players[p]!.pr = b2.map(x => { x.owner = p; return x; }); s.players[enemy]!.pr = a2.map(x => { x.owner = enemy; return x; });
+      log(g, `${P(p)} exchanges Point Rows with ${P(enemy)}.`);
+      break;
+    }
+    case 'super-4-er': {
+      const a2 = s.players[p]!.er.filter(isAnchor), b2 = s.players[enemy]!.er.filter(isAnchor);
+      for (const x of a2) { s.players[p]!.er.splice(s.players[p]!.er.indexOf(x), 1); x.owner = enemy; s.players[enemy]!.er.push(x); }
+      for (const x of b2) { s.players[enemy]!.er.splice(s.players[enemy]!.er.indexOf(x), 1); x.owner = p; s.players[p]!.er.push(x); }
+      log(g, `${P(p)} exchanges Enduring Rows with ${P(enemy)}.`);
+      break;
+    }
+    case 'super-5': {
+      const milled = s.deck.splice(0, 3);
+      for (const x of milled) toGraveyard(g, x);
+      log(g, `Super Recycle mills ${milled.map(cardName).join(', ')}.`);
+      if (milled.length) setChoice(g, { player: p, kind: 'full', prompt: 'Super Recycle: play one of the milled cards.', cards: milled, public: true, held: true, data: { mode: 'super-5' } });
+      break;
+    }
+    case 'super-6': {
+      const before = new Set(s.players[p]!.hand.map(x => x.id));
+      drawCards(g, p, 7);
+      const drawn = s.players[p]!.hand.filter(x => !before.has(x.id));
+      log(g, `${P(p)} super-digs ${drawn.length} cards.`);
+      if (drawn.length > 4) {
+        const returns = drawn.slice(4);
+        for (const x of returns) { const i = s.players[p]!.hand.indexOf(x); s.players[p]!.hand.splice(i, 1); toDeck(g, x, 'bottom'); }
+        log(g, `${P(p)} keeps 4; returns ${returns.map(cardName).join(', ')} to the bottom of DP.`);
+      }
+      break;
+    }
+    case 'super-7': {
+      const revealed = s.deck.splice(0, 3);
+      if (revealed.length) log(g, `Super Seven reveals ${revealed.map(cardName).join(', ')}.`);
+      if (revealed.length >= 2) setChoice(g, { player: p, kind: 'seven-hand', prompt: 'Super Seven: take one; the other becomes a generated play.', cards: revealed, public: true, held: true, data: { topdeck: 1 } });
+      else if (revealed.length === 1) setChoice(g, { player: p, kind: 'seven-single', prompt: 'Super Seven: take it or play it.', cards: revealed, public: true, held: true, data: { topdeck: 1 } });
+      break;
+    }
+    case 'super-8': {
+      const t = removeFromBoard(g, item.action.targetId!);
+      if (t) { toGraveyard(g, t); log(g, `${P(p)} absolute-Scuttles ${cardName(t)}.`); }
+      break;
+    }
+    case 'super-J': {
+      gainMini(s, 2); drawCards(g, p, 1);
+      log(g, `${P(p)} gains two Mini-Turns and draws one (Tempo Force).`);
+      break;
+    }
+    case 'super-A': case 'ultra-red': {
+      log(g, `${item.action.label} resolves.`);
+      break;
+    }
+    case 'ultra-black': {
+      const cards = [c!, ...(item.cards ?? [])];
+      const score = cards[0]!, cast = cards[1]!, exile = cards[2]!;
+      clean(score); score.owner = p; s.players[p]!.pr.push(score);
+      log(g, `${P(p)} scores ${cardName(score)} (Ultra Black).`);
+      setChoice(g, { player: p, kind: 'generated', prompt: `Declare ${cardName(cast)}: play a legal effect (Ultra Black cast).`, cards: [cast], public: true, held: true, data: { effectOnly: 1 } });
+      toExile(g, exile);
+      log(g, `${cardName(exile)} is Exiled (Ultra Black).`);
+      return;
+    }
+    case 'ultra-mixed-draw': {
+      s.players[p]!.ultraUsed = true;
+      gainMini(s, 2); drawCards(g, p, 2);
+      log(g, `${P(p)} gains two Mini-Turns and draws two (Mixed Ultra).`);
+      break;
+    }
+    case 'ultra-mixed-exile': {
+      s.players[p]!.ultraUsed = true;
+      if (item.action.targetId) { const i = s.exile!.findIndex(x => x.id === item.action.targetId); if (i >= 0) { const x = s.exile!.splice(i, 1)[0]!; toHand(g, p, x, true); log(g, `${P(p)} rummages ${cardName(x)} from Exile (Mixed Ultra).`); } }
+      else log(g, `${P(p)} has no Exile card to rummage (Mixed Ultra).`);
+      break;
+    }
+    case 'sudden': {
+      if (!s.suddenDeath) { s.suddenDeath = { remaining: 3, activationTurn: s.turn, player: p }; log(g, `${P(p)} activates Sudden Death.`); }
+      else { s.suddenDeath = null; log(g, `${P(p)} deactivates Sudden Death.`); }
+      break;
+    }
+    // ---- Full-profile ordinary extensions ----
+    case 'purge-aegis': {
+      const t = removeFromBoard(g, item.action.targetId!);
+      if (t) { toGraveyard(g, t); log(g, `${P(p)} purges the Aegised ${cardName(t)}.`); }
+      break;
+    }
+    case 'total-clear': {
+      const victims = onTable(s).filter(l => l.player !== p).map(l => l.card);
+      for (const v of victims) { removeFromBoard(g, v.id); toGraveyard(g, v); }
+      log(g, victims.length ? `Total Clear: ${victims.map(cardName).join(', ')}.` : 'Total Clear: nothing to clear.');
+      break;
+    }
+    case 'raid-spade': {
+      if (s.players[enemy]!.hand.length) setChoice(g, { player: enemy, kind: 'present', prompt: 'Enhanced Raid: present two cards; your opponent plays one.', cards: s.players[enemy]!.hand.slice(), count: 2, public: false, held: false, data: { caster: p, presented: [], super: 1 } });
+      break;
+    }
+    case 'seven-spade': {
+      const revealed = s.deck.splice(0, 3);
+      if (revealed.length) log(g, `Topdeck reveals ${revealed.map(cardName).join(', ')}.`);
+      if (revealed.length >= 2) setChoice(g, { player: p, kind: 'seven-hand', prompt: 'Topdeck: take one; play one.', cards: revealed, public: true, held: true, data: { topdeck: 1 } });
+      else if (revealed.length === 1) setChoice(g, { player: p, kind: 'seven-single', prompt: 'Topdeck: take it or play it.', cards: revealed, public: true, held: true, data: { topdeck: 1 } });
+      break;
+    }
+    case 'deep-draw': {
+      for (const id of item.action.targetIds ?? []) { const x = takeFromHand(g, p, id); toGraveyard(g, x); }
+      const n = drawCards(g, p, 6);
+      log(g, `${P(p)} discards ${(item.action.targetIds ?? []).length} and draws ${n} (Deep Draw).`);
+      break;
+    }
+    case 'exile-rummage': {
+      const i = s.exile!.findIndex(x => x.id === item.action.targetId);
+      if (i >= 0) { const x = s.exile!.splice(i, 1)[0]!; toHand(g, p, x, true); log(g, `${P(p)} rummages ${cardName(x)} from Exile.`); }
+      break;
+    }
+    case 'peek': {
+      const down = (s.swapBar ?? []).filter(x => !x.faceUp);
+      if (down.length) setChoice(g, { player: p, kind: 'full', prompt: 'Peek at face-down Swap Bar cards: take one or play one as an effect.', cards: down.map(x => x.card), public: false, held: true, data: { mode: 'peek' } });
+      else log(g, 'Peek: no face-down Swap Bar cards.');
+      break;
+    }
+    case 'aegis-field': {
+      for (const l of onTable(s)) if (l.player === p && l.card.rank !== '9' && !protectedCard(l.card)) aegis(s, l.card, p);
+      log(g, `${P(p)} shields their Point Row (Aegis Field).`);
+      break;
+    }
+    case 'queen-aegis': {
+      const t = locate(s, item.action.targetId);
+      if (t) { aegis(s, t.card, p); log(g, `${P(p)} shields ${cardName(t.card)} (Queen Quick).`); }
+      s.players[p]!.quickQUsed = true;
+      break;
+    }
+    case 'free-scuttle': {
+      const t = locate(s, item.action.targetId);
+      if (t) { const x = removeFromBoard(g, t.card.id); if (x) { toGraveyard(g, x); log(g, `${P(p)} free-Scuttles ${cardName(x)}.`); } }
+      break;
+    }
+    case 'goal5-spade': {
+      s.players[enemy]!.goal += 5;
+      s.players[p]!.goal = Math.max(0, s.players[p]!.goal - 2);
+      log(g, `${P(enemy)}'s Goal rises to ${s.players[enemy]!.goal}; ${P(p)}'s Goal falls to ${s.players[p]!.goal}.`);
+      if (s.players[p]!.hand.length) setChoice(g, { player: p, kind: 'discard', prompt: 'Goal Shift Spade: discard one card.', cards: s.players[p]!.hand.slice(), public: false, held: false, data: {} });
+      break;
+    }
+    case 'attach-er': {
+      const host = locate(s, item.action.targetId);
+      if (host && host.row === 'er' && isAnchor(host.card)) {
+        clean(c); c.owner = p; c.hostId = host.card.id;
+        s.players[p]!.er.push(c);
+        log(g, `${P(p)} Jacks the Anchor ${cardName(host.card)}.`);
+        event(g, { t: 'attach', p, host: host.card.rank });
+        return;
+      }
+      break;
+    }
+    case 'tempo': {
+      s.players[p]!.tenUsed = true;
+      gainMini(s, 2); drawCards(g, p, 1);
+      log(g, `${P(p)} gains two Mini-Turns and draws one (Tempo).`);
+      break;
+    }
+    case 'exile-recovery': {
+      s.players[p]!.tenUsed = true;
+      const i = s.exile!.findIndex(x => x.id === item.action.targetId);
+      if (i >= 0) { const x = s.exile!.splice(i, 1)[0]!; toHand(g, p, x, true); log(g, `${P(p)} recovers ${cardName(x)} from Exile.`); }
+      break;
+    }
+    case 'theft': {
+      const targetItem = s.stack.find(x => x.id === item.action.targetId);
+      if (targetItem) {
+        const stolen = [...(targetItem.card ? [targetItem.card] : []), ...(targetItem.cards ?? [])];
+        s.stack.splice(s.stack.indexOf(targetItem), 1);
+        for (const x of stolen) { clean(x); x.owner = p; s.players[p]!.hand.push(x); }
+        log(g, `${P(p)} steals “${targetItem.action.label}” into hand (Stack Theft).`);
+      }
+      break;
+    }
   }
   suspend(g, c);
 }
@@ -741,6 +1217,51 @@ function resolveChoice(g: G, p: number, a: GameAction) {
       if (c) { log(g, `${P(p)} draws ${cardName(c)} from the ${a.mode === 'top' ? 'top' : 'bottom'} of GY.`); toHand(g, p, c); }
       return;
     }
+    case 'full': {
+      const mode = q.data.mode as string;
+      switch (mode) {
+        case 'foundation':
+          if (a.mode === 'foundation-score') { const c = takeFromHand(g, p, a.cardId); log(g, `${P(p)} scores ${cardName(c)} via Foundation.`); scoreCard(g, p, c); }
+          else log(g, `${P(p)} skips the Foundation bonus.`);
+          done();
+          return;
+        case 'bj-recycle': {
+          if (a.mode === 'bj-done') { done(); return; }
+          const i = s.exile!.findIndex(x => x.id === a.cardId);
+          if (i >= 0) { const c = s.exile!.splice(i, 1)[0]!; toDeck(g, c, 'top'); log(g, `${P(p)} moves ${cardName(c)} from Exile to the top of DP.`); }
+          q.cards = q.cards.filter(x => x.id !== a.cardId);
+          if (!q.cards.length) done();
+          return;
+        }
+        case 'voltage-4':
+          done();
+          return;
+        case 'peek':
+          if (a.mode === 'peek-take') { const c = q.cards.find(x => x.id === a.cardId); if (c) { toHand(g, p, c, true); log(g, `${P(p)} takes ${cardName(c)} from the Swap Bar.`); } q.cards = q.cards.filter(x => x.id !== a.cardId); }
+          else if (a.mode === 'peek-effect') { const c = q.cards[0]; if (c) { log(g, `${P(p)} plays ${cardName(c)} as a generated effect.`); setChoice(g, { player: p, kind: 'generated', prompt: `Declare ${cardName(c)}: score it or use a legal effect.`, cards: [c], public: true, held: true, data: { effectOnly: 1 } }); return; } }
+          done();
+          return;
+        case 'exile-rummage': {
+          const i = s.exile!.findIndex(x => x.id === a.cardId);
+          if (i >= 0) { const c = s.exile!.splice(i, 1)[0]!; toHand(g, p, c, true); log(g, `${P(p)} rummages ${cardName(c)} from Exile.`); }
+          done();
+          return;
+        }
+        case 'super-5': {
+          const c = q.cards.find(x => x.id === a.cardId);
+          q.cards = [];
+          done();
+          if (c) { log(g, `${P(p)} plays the milled ${cardName(c)}.`); setChoice(g, { player: p, kind: 'generated', prompt: `Declare ${cardName(c)}: score it or use a legal effect.`, cards: [c], public: true, held: true, data: {} }); }
+          return;
+        }
+        case 'theft':
+          done();
+          return;
+        default:
+          done();
+          return;
+      }
+    }
   }
 }
 
@@ -768,8 +1289,10 @@ function startTurn(g: G, p: number) {
   const s = g.s;
   s.activePlayer = p; s.priority = p; s.passes = 0; s.turn++; s.miniTurns = 1;
   s.players[p]!.quick2Used = false; s.players[p]!.disrupted = [];
+  if (full(s)) { s.phase = 'start'; s.players[p]!.swapUsed = false; s.players[p]!.tenUsed = false; s.miniTurnsGranted = 1; s.miniTurnsUsed = 0; }
   if (!s.deck.length && s.exhausted === null) { s.exhausted = 3; log(g, 'The Draw Pile is empty at Start: Exhausted begins (counter 3).'); }
-  for (const c of [...s.players[p]!.pr, ...s.players[p]!.er]) delete c.tapped;
+  // §9: Core does not auto-untap at Start; Nines release only on controller's score.
+  if (!full(s)) for (const c of [...s.players[p]!.pr, ...s.players[p]!.er]) delete c.tapped;
   log(g, `Turn ${s.turn}: ${P(p)}.`);
 }
 
@@ -783,6 +1306,9 @@ export function projectGame(s: GameState, you: number | null): GameView {
     players: s.players.map((pl, i) => ({ handCount: pl.hand.length, pr: structuredClone(pl.pr), er: structuredClone(pl.er), goal: pl.goal, score: score(s, i), guard: guarded(s, i), disrupted: [...pl.disrupted], quick2Used: pl.quick2Used })),
     hand: seat === null ? [] : structuredClone(s.players[seat]!.hand),
     deckCount: s.deck.length, graveyard: structuredClone(s.graveyard),
+    exile: full(s) ? structuredClone(s.exile ?? []) : undefined,
+    swapBar: full(s) ? (s.swapBar ?? []).map((x, slot) => ({ slot, ...(x.faceUp ? { card: structuredClone(x.card) } : {}) })) : undefined,
+    suddenDeath: full(s) ? s.suddenDeath : undefined, miniTurnsGranted: full(s) ? s.miniTurnsGranted : undefined, voltage: full(s) ? s.voltage : undefined,
     activePlayer: s.activePlayer, phase: s.phase, miniTurns: s.miniTurns, turn: s.turn,
     pending: s.stack.map(i => ({ id: i.id, player: i.player, label: i.action.label, ruleRef: i.action.ruleRef, cls: i.cls, ...(i.card ? { card: structuredClone(i.card) } : {}) })),
     priority: s.priority,

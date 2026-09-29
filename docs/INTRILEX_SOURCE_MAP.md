@@ -76,3 +76,11 @@ All lessons run on the real engine from fixed positions (`packages/intrilex/less
 ## Core sandbox
 
 The Core template reproduces §2–3: random Player A (5 cards) and B (6), Swap Bar 2 face-down + 1 face-up after the hands, Goals 21, PR/ER per player, DP, GY, Exile, plus manual counters (Secured PR, Mini-Turns, Exhaust, Board Lock) and markers (Tapped, Aegis, Revealed, Exile-Bound, Jacked, Disrupted, Skip). Everything after setup is manual; the UI states this on every Core view.
+
+## Full rules-assisted audit — September 29, 2026
+
+The separate `intrilex-full` profile targets standard two-player Core (§2, Parts I–VI), with optional modules disabled (Part VIII introduction). The full source-family checklist, declaration/resolution/projection seams, and verification boundary are in [INTRILEX_FULL_AUDIT.md](INTRILEX_FULL_AUDIT.md). That checklist is a requirements audit; it does not certify implementation coverage. See the latest `STATUS.md` for actual executed gates.
+
+**FULL-R1 (explicit Deffy ruling, September 29, 2026):** Each Five has a separate optional Exile-rummage mode costing one Mini-Turn, taking exactly one card from its suit-permitted Exile range (§25 14.3, §26 Five) into hand as Revealed-Until-Start. This supplies the activation grant omitted by the book's conditional phrasing and leaves normal Recycle available. Diamonds requires at least five Exile cards; an empty access range has no fallback. This ruling supersedes the missing-grant ambiguity only; the canonical source file remains unchanged.
+
+Full coverage must preserve the codex's explicit counter classes: Court and Marriage are multi-card **Anchor** plays, directly counterable by K♠; Ace-family multi-card authority applies to eligible **Effect** plays. Full Solo Wild is explicitly enabled by §26 Two; the existing D-3 question concerns First Contact only.

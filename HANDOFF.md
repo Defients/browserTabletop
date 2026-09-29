@@ -1,3 +1,32 @@
+# Latest handoff: Intrilex Full-profile engine reconstructed
+
+Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+The Full-profile engine layer in `packages/intrilex/engine.ts` was reconstructed after an accidental `git checkout` reverted the uncommitted work. First Contact behavior is preserved; Full branches on `full(s)`. All 132 Node tests pass (including 12 Full-profile tests), lint and typecheck are clean, both `npm run build` and `npm run build:neocities` succeed, and all 24 Playwright e2e tests pass (Chromium + Firefox, including the Full table public/private zones test). See the newest `STATUS.md` section for the gate table.
+
+### What is now implemented
+
+- `FULL_MODES` table and `infoFor` (~30 modes), `fullOrdinary` (suit-specific 3♠/4♠/6♠/7♠/J♠, 5 exile rummage, 10♥/♠/♦, 2/K♠ wild copy), `compositeActions` (Super, Court, Marriage, Sudden, Ultra), `superModes`, `fullChoices` for `Choice.kind === 'full'`.
+- `perform`: `start-action`, `swap-down`, `swap-draw`, `draw-cast`, `voltage`, composite `cardIds`/`targetIds`.
+- `resolve`: `draw-cast`, `foundation`, `bj-recycle` triggers; `resolveEffect` all Full modes; `resolveChoice` `'full'` kind.
+- `scoreCard` Nine release, 10♣ Foundation, BJ recycle; `startTurn` Full Start Phase; `projectGame` Full public fields (exile, swapBar, suddenDeath, voltage); `createGame` Full setup (v3, Goal 21, Exile, Swap Bar).
+- Counter resolution scraps all composite sources.
+
+### Ranked next steps
+
+1. Expand Full test coverage: Super/Ultra/Sudden modes, Voltage, Draw & Cast, Swap Bar down/up, Black Joker recycle, Exile recovery, deep draw, peek. The 12 current tests cover setup, privacy, Exile ordering, forged-command rejection, victory timing, Queen Court, Royal Marriage, Queen Aegis, Nine tap, Aegis blocking.
+2. Reconcile `docs/INTRILEX_FULL_AUDIT.md` checklist items without dedicated tests.
+3. Obtain rules-owner rulings for source-map D-1 and D-3; do not silently decide.
+4. Configure/deploy the separate multiplayer server only when authorized; keep the Neocities bundle's server origin blank.
+
+### Notes
+
+- `packages/templates/index.ts` had invalid UTF-8 (mis-encoded `·`); fixed.
+- `eslint.config.js` now ignores `release/**` (generated build artifacts).
+- No public deployment, commit, or push occurred. Working tree changes are uncommitted.
+
+---
+
 # Latest handoff: Neocities + separate multiplayer
 
 Upload target now specified: **https://ttsbrowser.neocities.org/**. Prepared payload: `release/ttsbrowser-neocities-upload.zip`, also unpacked under `release/ttsbrowser-neocities/upload/`; instructions and hashes are in the parent folder. Its existing homepage is “Learn Jakuv - Interactive Tutorial”; root upload replaces it, while `/tabletop/` preserves it. No upload performed. Static rebuild/typecheck and both target-origin browser smoke checks passed; the separate multiplayer URL remains blank. See the newest `STATUS.md` section.

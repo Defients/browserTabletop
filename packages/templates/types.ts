@@ -1,8 +1,8 @@
 import type { TableDefinition } from '../tabletop/types.js';
 export type { CardDefinition, DeckDefinition, SetupOperation, TableLabel, SeatPosition } from '../tabletop/types.js';
 
-export type RulesProfile = 'free' | 'intrilex-core' | 'intrilex-first-contact';
-export const PROFILES: RulesProfile[] = ['free', 'intrilex-core', 'intrilex-first-contact'];
+export type RulesProfile = 'free' | 'intrilex-core' | 'intrilex-first-contact' | 'intrilex-full';
+export const PROFILES: RulesProfile[] = ['free', 'intrilex-core', 'intrilex-first-contact', 'intrilex-full'];
 
 /**
  * Versioned, declarative, data-only template. Game-specific data lives under `plugins`.

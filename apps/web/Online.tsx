@@ -10,7 +10,7 @@ import GameBoard from './GameBoard.js';
 
 const NICK = 'tabletop.nickname';
 const inviteLink = (token: string) => `${location.origin}${location.pathname}#/join/${token}`;
-const PROFILE_LABEL: Record<string, string> = { free: 'Free table', 'intrilex-core': 'Intrilex Core · manual sandbox', 'intrilex-first-contact': 'Intrilex First Contact · rules-assisted' };
+const PROFILE_LABEL: Record<string, string> = { free: 'Free table', 'intrilex-core': 'Intrilex Core · manual sandbox', 'intrilex-first-contact': 'Intrilex First Contact · rules-assisted', 'intrilex-full': 'Intrilex Full · rules-assisted' };
 
 function Offline() {
   return <p className="notice" role="alert">The table service is not reachable, so online tables are unavailable right now. <a href="#/practice/first-contact">Local practice</a> still works.</p>;
@@ -151,7 +151,7 @@ function RoomScreen({ initial }: { initial: RoomView }) {
       </header>
       {error && <div className="toast" role="alert"><span>{error}</span><button type="button" className="icon-btn" aria-label="Dismiss" onClick={clearError}>×</button></div>}
       {view.profile === 'intrilex-core' && <p className="notice small">Core sandbox: setup was automatic; everything after is manual. Scores, markers and legality are maintained by the players — nothing here adjudicates Core rules. <a href="#/rules">Rule reference</a></p>}
-      {view.game && <GameBoard view={view.game} onAction={a => command({ type: 'game', action: { type: a.type, cardId: a.cardId, targetId: a.targetId, mode: a.mode } })} busy={status === 'pending'}
+      {view.game && <GameBoard view={view.game} onAction={a => command({ type: 'game', action: { type: a.type, cardId: a.cardId, targetId: a.targetId, cardIds: a.cardIds, targetIds: a.targetIds, mode: a.mode } })} busy={status === 'pending'}
         names={[names(0), names(1)]} hints={hints} onToggleHints={() => { setHints(!hints); saveLocal('tabletop.hints', !hints); }} presence={presence} participants={view.participants} />}
       {view.table && <TableBoard view={view.table} seat={view.you.seat} host={host} art={art} onCommand={action => command({ type: 'table', action })} participants={view.participants} presence={presence}
         canUndo={view.canUndo} onUndo={() => command({ type: 'undo' })} readOnly={view.you.readOnly} />}

@@ -16,7 +16,7 @@ export interface RoomView {
   canUndo: boolean;
 }
 
-export type GameActionInput = { type: string; cardId?: string; targetId?: string; mode?: string };
+export type GameActionInput = { type: string; cardId?: string; targetId?: string; cardIds?: string[]; targetIds?: string[]; mode?: string };
 export type RoomCommand =
   | { type: 'table'; action: TableCommand }
   | { type: 'game'; action: GameActionInput }

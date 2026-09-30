@@ -3,8 +3,10 @@ import type { GameAction, GameCard, GameView } from '../../packages/intrilex/typ
 import { RULES, anchorValue, explainAction, explainCard } from '../../packages/intrilex/index.js';
 import type { PointerClientMessage, ParticipantView } from '../../packages/protocol/index.js';
 import { actionKey } from '../../packages/intrilex/actionIdentity.js';
+import { actionLookups, buildActionEntries, paramOptions, selectOption, type ActionEntry } from '../../packages/intrilex/presentation.js';
 import { rankSuggestedMoves } from '../../packages/intrilex/suggestions.js';
 import { CardFace, Modal, cardName, isRed, suitSpans, suitSymbol } from './common.js';
+import PossibleMoves, { type ComposerState } from './ActionPanel.js';
 import { PresenceLayer } from './Presence.js';
 import GameLog from './GameLog.js';
 
@@ -19,11 +21,6 @@ export interface GameBoardProps {
 }
 
 const TYPE_ORDER: Record<string, number> = { choose: 0, 'generated-effect': 1, counter: 2, effect: 3, score: 4, scuttle: 5, draw: 6, decline: 7, 'exhausted-pass': 8, end: 9 };
-const ACTION_ICON: Record<string, string> = {
-  choose: '◈', 'generated-effect': '✧', counter: '✕', effect: '✦', score: '▲', scuttle: '⚔',
-  draw: '▽', decline: '↩', 'exhausted-pass': '∅', end: '⏵', 'start-action': '▶',
-  'swap-down': '⇅', 'swap-draw': '⇄', 'draw-cast': '✳', voltage: '⚡',
-};
 
 /** A compressed fan of card backs. Count is authoritative; the fan never leaks identities. */
 function HandFan({ count, max = 8, small = false }: { count: number; max?: number; small?: boolean }) {
@@ -58,6 +55,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
   const [why, setWhy] = useState<string[] | null>(null);
   const [sheet, setSheet] = useState(true);
   const [actionSearch, setActionSearch] = useState('');
+  const [composer, setComposer] = useState<ComposerState | null>(null);
   const [handNav, setHandNav] = useState<[boolean, boolean]>([false, false]);
   const surface = useRef<HTMLDivElement>(null);
   const handStrip = useRef<HTMLDivElement>(null);
@@ -81,15 +79,55 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
 
   const actions = useMemo(() => {
     const list = view.legalActions.filter(a => !selected || a.cardId === selected || a.targetId === selected || a.cardIds?.includes(selected) || a.targetIds?.includes(selected) || (!a.cardId && !a.targetId && !a.cardIds?.length && !a.targetIds?.length && a.type !== 'choose'));
-    return list.filter(a => !actionSearch || a.label.toLocaleLowerCase().includes(actionSearch.trim().toLocaleLowerCase())).sort((a, b) => (TYPE_ORDER[a.type] ?? 9) - (TYPE_ORDER[b.type] ?? 9));
-  }, [view.legalActions, selected, actionSearch]);
+    return list.sort((a, b) => (TYPE_ORDER[a.type] ?? 9) - (TYPE_ORDER[b.type] ?? 9));
+  }, [view.legalActions, selected]);
+  // Semantic decision entries: simple actions + action families, with the search applied
+  // family-aware (a family survives when its title or any variant label matches).
+  const entries = useMemo(() => buildActionEntries(view, actions, actionSearch), [view, actions, actionSearch]);
+  const look = useMemo(() => actionLookups(view), [view]);
+  const openFamily = composer ? entries.find((e): e is Extract<ActionEntry, { kind: 'family' }> => e.kind === 'family' && e.family.id === composer.familyId)?.family : undefined;
+  // Board cards that would satisfy a still-unset target parameter of the open family.
+  const focusTargets = useMemo(() => {
+    const ids = new Set<string>();
+    if (!composer || !openFamily) return ids;
+    for (const p of openFamily.params) {
+      if (p.kind !== 'target' || composer.sel[p.key] !== undefined) continue;
+      for (const o of paramOptions(openFamily, p, composer.sel, look)) if (o.card) ids.add(o.card.id);
+    }
+    return ids;
+  }, [composer, openFamily, look]);
   const myDecision = view.legalActions.length > 0;
   const status = view.winner !== null ? (view.winner === 'draw' ? 'The game is drawn.' : `${label(view.winner)} ${view.winner === view.you ? 'win' : 'wins'}!`)
     : view.choice ? (view.choice.player === view.you ? 'Your choice' : `${label(view.choice.player)} is choosing`)
     : myDecision ? (view.pending.length ? 'Respond or decline' : 'Your move')
     : view.pending.length ? `${label(view.priority)} may respond` : `${label(view.activePlayer)}’s turn`;
 
-  const pick = (c: GameCard) => setSelected(s => (s === c.id ? null : c.id));
+  // While the composer is open, board/hand clicks route into the family's parameters when the
+  // card is a legal option; otherwise they keep their normal "filter by card" behaviour.
+  const pick = (c: GameCard) => {
+    if (composer && openFamily) {
+      for (const p of openFamily.params) {
+        if (p.kind !== 'card' && p.kind !== 'cards' && p.kind !== 'target') continue;
+        if (paramOptions(openFamily, p, composer.sel, look).some(o => o.card?.id === c.id)) {
+          setComposer({ familyId: openFamily.id, sel: selectOption(openFamily, composer.sel, p.key, c.id) });
+          return;
+        }
+      }
+    }
+    setSelected(s => (s === c.id ? null : c.id));
+  };
+  const swapSlot = (n: number, c?: GameCard) => {
+    if (composer && openFamily) {
+      for (const p of openFamily.params) {
+        if (p.kind !== 'slot') continue;
+        if (paramOptions(openFamily, p, composer.sel, look).some(o => o.value === String(n))) {
+          setComposer({ familyId: openFamily.id, sel: selectOption(openFamily, composer.sel, p.key, String(n)) });
+          return;
+        }
+      }
+    }
+    if (c) pick(c);
+  };
   const tapTag = (c: GameCard, owner: number) =>
     full && c.tapUntil === 'score' ? `Nine Tap · 0 pts until ${label(owner)} scores`
     : full && c.tapUntil === 'hold' ? `Held · 0 pts until ${label(owner)}’s Start`
@@ -118,7 +156,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
             return (
               <div key={c.id} className={`fc-slot ${c.hostId ? 'is-attached' : ''}`}>
                 <span className="fc-card-wrap">
-                  <CardFace rank={c.rank} suit={c.suit} tapped={c.tapped} attached={!!c.hostId} selected={selected === c.id} highlight={view.legalActions.some(a => a.targetId === c.id)}
+                  <CardFace rank={c.rank} suit={c.suit} tapped={c.tapped} attached={!!c.hostId} selected={selected === c.id} highlight={focusTargets.has(c.id) || view.legalActions.some(a => a.targetId === c.id)}
                     extraLabel={c.hostId ? `Jack attached to ${cardName(cards.find(x => x.id === c.hostId) ?? view.players[p]!.pr.find(x => x.id === c.hostId) ?? { rank: undefined })}` : undefined}
                     onClick={() => pick(c)} onDoubleClick={() => { setInspect(c); onInspectCard?.(); }} />
                   <span className="fc-flags">
@@ -228,7 +266,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
             <div className="hx-swap-slots">
               {view.swapBar?.map(entry => (
                 <div className="full-swap-slot hx-swap-slot" key={entry.slot}>
-                  {entry.card ? <CardFace size="sm" rank={entry.card.rank} suit={entry.card.suit} selected={selected === entry.card.id} onClick={() => pick(entry.card!)} /> : <CardFace size="sm" />}
+                  {entry.card ? <CardFace size="sm" rank={entry.card.rank} suit={entry.card.suit} selected={selected === entry.card.id} onClick={() => swapSlot(entry.slot, entry.card)} /> : <CardFace size="sm" onClick={() => swapSlot(entry.slot)} />}
                   <small>Slot {entry.slot + 1} · {entry.card ? 'face-up' : 'hidden'}</small>
                 </div>
               ))}
@@ -343,14 +381,9 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
           {hints && !selected && myDecision && <p className="muted small">Select a card to focus its choices. Legal choices only are listed; the engine checks them again.</p>}
           {full && hints && view.phase === 'start' && <p className="muted small">Start Phase: resolve any choices, optionally use a face-down Swap, then enter the Action Phase. The listed choices come from the rules engine.</p>}
           {full && myDecision && <label className="small">Find a legal action<input type="search" value={actionSearch} onChange={e => setActionSearch(e.target.value)} placeholder="Card, mode or target…" /></label>}
-          <div className="fc-actions">
-            {actions.map((a, i) => (
-              <button type="button" title={explainAction(a)} key={`${actionKey(a)}|${i}`} data-ic={ACTION_ICON[a.type] ?? '·'} className={`action-btn action-${a.type} ${suggestedKeys.has(actionKey(a)) ? 'is-suggested' : ''}`} disabled={busy} onClick={() => execute(actionKey(a))}>
-                <span>{suitSpans(a.label)}</span>{hints && RULES[a.ruleRef] && <small>{RULES[a.ruleRef]!.ref}</small>}
-              </button>
-            ))}
-            {!actions.length && <p className="empty-note">{view.winner !== null ? 'This game is complete.' : view.you === null ? 'Spectators follow every public play. Hands stay private.' : actionSearch ? 'No legal action matches this search. Clear the search to see other choices.' : selected ? 'No legal action with this card right now.' : `Waiting for ${label(view.choice?.player ?? view.priority)}.`}</p>}
-          </div>
+          <PossibleMoves entries={entries} look={look} busy={busy} hints={hints} suggestedKeys={suggestedKeys}
+            run={a => execute(actionKey(a))} composer={composer} onComposer={setComposer}
+            empty={<p className="empty-note">{view.winner !== null ? 'This game is complete.' : view.you === null ? 'Spectators follow every public play. Hands stay private.' : actionSearch ? 'No legal action matches this search. Clear the search to see other choices.' : selected ? 'No legal action with this card right now.' : `Waiting for ${label(view.choice?.player ?? view.priority)}.`}</p>} />
           <GameLog history={view.history} open={hints} nameOf={label} />
         </aside>
       </div>

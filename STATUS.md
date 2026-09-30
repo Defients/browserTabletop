@@ -1,5 +1,40 @@
 # Status
 
+## Action Families — semantic Possible Moves — September 29, 2026
+
+The Legal Actions panel no longer lists every serialized rules-engine action. A pure presentation adapter (`packages/intrilex/presentation.ts`) groups compatible legal actions into **Action Families** via declarative specs keyed on structured fields (`type`, `cardId(s)`, `targetId(s)`, `mode` prefixes) — never label text — and `apps/web/ActionPanel.tsx` renders them: single-variant entries stay one-click rows; single-parameter families (choices, face-up swap draw, ≤8-variant voltage guesses) expand inline quick options; multi-parameter families (Swap Bar, Scuttle, Counter, Ultras, Supers/composites, per-card effect modes, multi-card costs like Deep Draw) open a drill-down **Action Composer** that keeps the board visible.
+
+Composer options are always derived from the legal variants compatible with the current picks, so impossible Cartesian combinations cannot be offered; Confirm fires only when exactly one original engine action resolves (exact-set matching disambiguates subset costs). Board clicks route into open composer parameters (hand/board cards to card params, Swap Bar slots to slot params), live picks reconcile against refreshed legal actions, and a vanished family closes the composer. In a Full start phase the previous 11-row list renders as 2 semantic rows (`Finish Start`, `⇅ Swap Bar · 10`); confirming resolves to the exact engine action (verified: `Swap face-down slot 1 · give 7♣`).
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| `npm run build` | PASS |
+| Node tests | PASS — 212/212 (13 new `tests/presentation.test.ts`: grouping, param extraction, non-rectangular filtering, exact/subset cost resolution, stale-pick reconcile, family-disappearance, deterministic ids, search) |
+| Playwright e2e | PASS — 58/58 across Chromium + Firefox; `e2e/fc.ts` helpers now traverse families (label matching via `data-labels`, DFS composer picks until the live preview matches); `social.spec.ts` suggestion assertion accepts family membership |
+| Visual inspection | Full start phase at 1440×900: `Swap Bar 10 ›` row → composer with slot card tiles + hand-card give options, live preview, sticky Confirm, Escape/back focus restore (`artifacts/shots/panel-*.png`) |
+
+No commit, push, or public deployment occurred.
+
+## Action-button squash fix — September 29, 2026
+
+Action buttons in Possible Moves were being squeezed below their natural height: `.fc-actions` is a bounded column flex scroller, and `.action-btn` declares `min-height: 0`, so `flex-shrink: 1` compressed two-line labels until text escaped the button borders. `.fc-actions > *` is now `flex: none`, so every button renders at content height (measured 76–98px) and the list scrolls. `.hx-stack > *` got the same guard for identical protection in the now-scrollable Pending Plays panel.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| `npm run build` | PASS |
+| Responsive spec (Chromium + Firefox) | PASS — 16/16 |
+| Visual inspection | Two-line labels render inside button borders at 1366×768 and 1024×576; zero squashed buttons |
+
+No commit, push, or public deployment occurred.
+
 ## Pending Plays capped + larger stack cards — September 29, 2026
 
 The Pending Plays panel previously grew to fill all leftover left-rail height (`flex: 1 1 0%`), so even an empty "STACK CLEAR" stretched hundreds of pixels. It now sizes to content (`flex: 0 1 auto`) and caps at `max-height: min(26rem, 42dvh)` — roughly four entries — scrolling internally past that, which matches the stack's realistic 3–5-item depth. Stack cards grew from 34×46px to a `--hx-stack-card-h` token (`clamp(52px, 7.5dvh, 80px)`, DENSE floor 54px), so a pending play's card is clearly legible.

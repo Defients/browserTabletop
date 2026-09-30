@@ -548,6 +548,9 @@ span.card { cursor: default; }
 .chip-row { display: flex; flex-wrap: wrap; gap: .35rem; }
 .chip { font-size: .78rem; min-height: 1.8rem; padding: .1rem .6rem; border-radius: 999px; }
 .fc-actions { display: flex; flex-direction: column; gap: .28rem; counter-reset: hxact; }
+/* List children keep their natural height — a bounded .fc-actions must scroll,
+   never squash buttons so wrapped labels escape their borders. */
+.fc-actions > * { flex: none; }
 .action-btn { position: relative; justify-content: flex-start; text-align: left; flex-direction: column; align-items: flex-start; gap: 0; padding: .38rem .6rem .4rem .7rem; min-height: 0; }
 .fc-actions .action-btn { padding-left: 2.4rem; min-height: 2.3rem; }
 .fc-actions .action-btn::before { counter-increment: hxact; content: counter(hxact); position: absolute; left: 0; top: .45rem; width: 2rem; text-align: center; font-size: .72rem; font-weight: 800; color: var(--ct-text-muted); }
@@ -563,6 +566,36 @@ span.card { cursor: default; }
 .action-start-action { border-left: 3px solid var(--ct-silver); }
 .action-swap-draw, .action-swap-down, .action-draw-cast { border-left: 3px solid var(--ct-magenta); }
 .action-voltage { border-left: 3px solid var(--ct-warning); }
+/* ── Action families & the Action Composer ─────────────────────────────────
+   Semantic decisions: one family row replaces N serialized variants; selecting
+   a family drills into a parameter composer that only offers legal variants. */
+.fc-fam { display: flex; flex-direction: column; }
+.action-family { border-left: 3px solid var(--ct-cyan); padding-right: 3.4rem; }
+.action-family[aria-expanded="true"] { border-color: var(--ct-cyan); box-shadow: inset 0 0 16px rgba(99, 226, 255, .07); }
+.fc-fam-count { position: absolute; right: .55rem; top: .5rem; font-size: .7rem; font-weight: 800; color: var(--ct-text-muted); background: rgba(140, 160, 255, .1); border: 1px solid rgba(140, 160, 255, .2); border-radius: 999px; padding: .06rem .45rem; font-variant-numeric: tabular-nums; }
+.action-family:hover:not(:disabled) .fc-fam-count { color: var(--ct-cyan); border-color: rgba(99, 226, 255, .45); }
+.fc-inline-opts { display: flex; flex-wrap: wrap; gap: .35rem; padding: .35rem .2rem .5rem 2.4rem; border-left: 3px solid rgba(99, 226, 255, .3); margin-left: .2rem; }
+.fc-opt { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2rem; padding: .3rem .6rem; font-size: .8rem; font-weight: 600; border-radius: 8px; }
+.fc-opt-card { flex-direction: column; gap: .3rem; padding: .4rem .4rem .35rem; }
+.fc-opt-card .card-sm { --card-w: 36px; --card-h: 50px; font-size: .62rem; padding: 2px 3px; }
+.fc-opt-card > span:last-child { font-size: .68rem; font-weight: 700; color: var(--ct-text-secondary); }
+.fc-opt-card.is-on > span:last-child { color: var(--ct-violet); }
+/* Composer — panel drill-down keeps the board visible while parameters are set. */
+.fc-composer { display: flex; flex-direction: column; gap: .6rem; outline: none; }
+.fc-composer-top { display: flex; align-items: center; justify-content: space-between; }
+.fc-composer-top .fc-fam-count { position: static; }
+.fc-composer-head { display: flex; align-items: center; gap: .6rem; padding: .5rem .6rem; border: 1px solid rgba(99, 226, 255, .25); border-radius: 10px; background: linear-gradient(168deg, rgba(99, 226, 255, .08), rgba(143, 123, 255, .05)); }
+.fc-composer-ic { font-size: 1.25rem; color: var(--ct-cyan); }
+.fc-composer-title { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+.fc-composer-title b { font-size: .92rem; }
+.fc-composer-title small { font-size: .72rem; color: var(--ct-text-muted); line-height: 1.35; }
+.fc-param { display: flex; flex-direction: column; gap: .3rem; }
+.fc-param-name { margin: 0; font-size: .66rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--ct-text-muted); }
+.fc-opts { display: flex; flex-wrap: wrap; gap: .35rem; }
+.fc-param-hint { font-size: .72rem; font-style: italic; color: var(--ct-text-muted); padding: .15rem 0; }
+.fc-preview { margin: 0; padding: .45rem .6rem; border-left: 3px solid var(--ct-cyan); border-radius: 0 8px 8px 0; background: rgba(99, 226, 255, .05); font-size: .8rem; line-height: 1.4; color: var(--ct-text-secondary); }
+.fc-composer-foot { position: sticky; bottom: 0; display: flex; justify-content: flex-end; padding: .35rem 0 .1rem; background: linear-gradient(180deg, transparent, rgba(9, 12, 28, .94) 45%); z-index: 2; }
+.fc-confirm { min-height: 2.2rem; padding: .3rem 1.3rem; font-weight: 800; letter-spacing: .02em; border-radius: 9px; }
 .full-revealed { margin-top: .1rem; padding: .45rem .55rem; border: 1px dashed rgba(150, 170, 255, .25); border-radius: 8px; }
 .full-revealed summary { font-size: .82rem; margin-bottom: .35rem; }
 .full-card-states { display: block; max-width: 92px; font-size: .62rem; color: var(--ct-violet); text-align: center; }
@@ -820,6 +853,7 @@ span.card { cursor: default; }
      3–5 at most, so it scrolls inside itself rather than filling the rail. */
   .app-wide .room .hx-left { overflow-y: auto; }
   .app-wide .room .hx-stack { flex: 0 1 auto; min-height: 3rem; max-height: min(26rem, 42dvh); overflow-y: auto; overscroll-behavior: contain; }
+  .app-wide .room .hx-stack > * { flex: none; }
   .app-wide .room .hx-stack-note { margin-top: auto; }
 
   /* Right rail: Opponent Hand keeps its footprint; Legal Actions fills the rest

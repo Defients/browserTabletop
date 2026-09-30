@@ -1,4 +1,23 @@
-# Latest handoff: Viewport-native gameboard (responsive density)
+# Latest handoff: Action Families — semantic Possible Moves
+
+Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+The Legal Actions panel now presents **semantic decisions**, not serialized engine actions. `packages/intrilex/presentation.ts` (pure, engine-free) groups legal actions into Action Families via declarative `FAMILY_SPECS` (structured `type`/`cardId(s)`/`targetId(s)`/`mode`-prefix matching — no label parsing): Swap Bar (slot×give), Scuttle, Counter, Ultras (red/black/mixed role params), Supers/composites, per-card effect-mode+target+cost families, choice families, face-up swap draw, voltage guesses. Single-variant entries render unchanged; single-param families expand inline quick options; multi-param families open a drill-down composer inside the same panel — board stays visible, sticky Confirm, Escape/back with focus restore.
+
+Legality: options derive only from variants compatible with current picks (no Cartesian product); Confirm fires only when exactly one original `GameAction` resolves (`actionKey` revalidated by `execute` against `latest.current.legalActions`); selections reconcile against new views — stale picks drop, vanished families close. `apps/web/ActionPanel.tsx` owns the UI; `GameBoard.tsx` wires entries/board-pick routing/swap-slot picking/focus targets. `data-labels` on family rows lets e2e match variants; `e2e/fc.ts` `click`/`settle`/`playOnce` traverse families (composer DFS until preview matches the engine label).
+
+Gates: lint, typecheck, 212/212 Node tests (13 new `tests/presentation.test.ts`), build, Playwright 58/58 (one Firefox backend-start flake passed on retry). Visual: `artifacts/shots/panel-*.png`. Recorded in `STATUS.md`. No commit, push, or deployment.
+
+### Ranked next steps
+
+1. Implement the Reveals gap (`projectGame` `revealedHand`; expire `revealed` at Start with handle rotation).
+2. Continue expanding Full coverage per `docs/INTRILEX_FULL_AUDIT.md` (Voltage, BJ recycle, Sudden Death endgame).
+3. Obtain rules-owner rulings for source-map D-1 and D-3.
+4. Configure/deploy the separate multiplayer server only when authorized; keep the Neocities server origin blank.
+
+---
+
+# Previous handoff: Viewport-native gameboard (responsive density)
 
 Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
 

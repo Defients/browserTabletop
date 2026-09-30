@@ -109,7 +109,10 @@ test('suggested move uses current exact legal action over HTTP; pending and disc
     const suggestion = suggestions.locator('button.suggested-action').first();
     const label = (await suggestion.getAttribute('aria-label'))!.replace(/^Suggested move \d+: /, '');
     const legal = current.game!.legalActions.find(action => action.label === label); expect(legal).toBeDefined();
-    await expect(actor.locator('.fc-actions button').filter({ hasText: label }).first()).toBeVisible();
+    // The same legal action is offered in Possible Moves — directly, or inside a semantic family.
+    const listed = await actor.locator('.fc-actions button').evaluateAll((els, want) =>
+      els.some(el => el.textContent?.includes(want) || (el.getAttribute('data-labels') ?? '').split('||').includes(want)), label);
+    expect(listed).toBe(true);
     expect(await actor.locator('.fc-suggestions').evaluate(el => { const possible = document.querySelector('.fc-possible-heading'); return !!possible && !!(el.compareDocumentPosition(possible) & Node.DOCUMENT_POSITION_FOLLOWING); })).toBe(true);
     let release = () => {}; const gate = new Promise<void>(resolve => { release = resolve; }); let payload: unknown;
     await actor.route(`**/api/rooms/${room.roomId}/commands`, async route => { payload = route.request().postDataJSON(); await gate; await route.continue(); });

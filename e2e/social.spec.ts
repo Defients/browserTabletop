@@ -22,7 +22,7 @@ async function join(page: Page, invite: string, nickname: string) {
   await collapseChat(page);
 }
 const trigger = (page: Page) => page.getByRole('button', { name: /^Room chat/ });
-async function openChat(page: Page) { if (await trigger(page).getAttribute('aria-expanded') !== 'true') await trigger(page).click(); await expect(page.getByText('Room chat is temporary:', { exact: false })).toBeVisible(); }
+async function openChat(page: Page) { if (await trigger(page).getAttribute('aria-expanded') !== 'true') await trigger(page).click(); await page.getByRole('button', { name: 'Chat retention info', exact: true }).hover(); await expect(page.getByText('Room chat is temporary:', { exact: false })).toBeVisible(); }
 async function send(page: Page, text: string) { await page.getByLabel('Message the room').fill(text); await page.getByRole('button', { name: 'Send message', exact: true }).click(); await expect(page.getByLabel('Message the room')).toHaveValue(''); }
 async function pages(browser: Browser, count: number, viewport = { width: 1440, height: 900 }) {
   const contexts: BrowserContext[] = [], result: Page[] = [];
@@ -140,10 +140,15 @@ test('scroll position, unread watermark and same-epoch reconnect survive live ch
     const connectionCount = await guest!.evaluate(() => { const connections: unknown = Reflect.get(window, 'socialTestSockets'); if (!Array.isArray(connections)) throw new Error('socket tracking missing'); for (const socket of connections) if (socket instanceof WebSocket && socket.readyState === WebSocket.OPEN) socket.close(); return connections.length; });
     await expect.poll(() => guest!.evaluate(() => { const connections: unknown = Reflect.get(window, 'socialTestSockets'); return Array.isArray(connections) ? connections.length : 0; })).toBeGreaterThan(connectionCount);
     await expect(guest!.locator('.save-state')).toHaveText(/Saved/, { timeout: 15_000 }); await expect(trigger(guest!)).toHaveText(/1 unread/); await openChat(guest!); await expect(guest!.locator('.chat-entry')).toHaveCount(6);
+    // The server allows 6 accepted sends per 10s per participant. Let the earlier sends' window
+    // lapse, then fill a fresh window so the next send is deterministically rejected in either browser.
+    await host!.waitForTimeout(10_100);
+    for (let i = 0; i < 6; i++) await send(host!, `Rate window filler ${i}`);
+    await expect(guest!.locator('.chat-entry')).toHaveCount(12);
     await host!.getByLabel('Message the room').fill('Rate-limited draft preserved'); await host!.getByRole('button', { name: 'Send message', exact: true }).click();
     await expect(host!.getByText('Message failed.', { exact: true })).toBeVisible(); await expect(host!.getByLabel('Message the room')).toHaveValue('Rate-limited draft preserved'); await expect(host!.locator('.save-state')).toHaveText(/Saved/);
     await host!.waitForTimeout(10_100); await host!.getByRole('button', { name: 'Retry same message', exact: true }).click();
-    await expect(host!.getByLabel('Message the room')).toHaveValue(''); await expect(guest!.locator('.chat-entry')).toHaveCount(7); await expect(guest!.locator('.chat-body').filter({ hasText: 'Rate-limited draft preserved' })).toHaveCount(1);
+    await expect(host!.getByLabel('Message the room')).toHaveValue(''); await expect(guest!.locator('.chat-entry')).toHaveCount(13); await expect(guest!.locator('.chat-body').filter({ hasText: 'Rate-limited draft preserved' })).toHaveCount(1);
   } finally { for (const context of clients.contexts) await context.close(); await backend.stop(); }
 });
 

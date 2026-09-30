@@ -14,7 +14,7 @@ for (const [w, h] of [[1440, 900], [390, 844]] as const) {
   const shot = async (name: string) => { await page.waitForTimeout(400); await page.screenshot({ path: `${out}/${w}-${name}.png`, fullPage: process.argv.includes('--full') }); };
   await page.goto(base + '/#/'); await shot('home');
   await page.goto(base + '/#/create'); await page.getByLabel('Your nickname').fill('Ada'); await page.getByRole('button', { name: 'Create table' }).click();
-  await page.waitForSelector('.room-bar'); await shot('room-invite');
+  await page.waitForSelector('.room-head'); await shot('room-invite');
   await page.keyboard.press('Escape'); await shot('room-fc');
   await page.goto(base + '/#/learn/orientation'); await shot('lesson');
   await page.goto(base + '/#/practice/table/standard-54'); await shot('practice-table');

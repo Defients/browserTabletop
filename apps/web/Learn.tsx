@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createLesson, lessonAct, lessonHint, lessonObserve, lessons, projectGame, resumeLesson, saveLesson, type GameAction, type LessonState } from '../../packages/intrilex/index.js';
-import { loadLocal, saveLocal } from './common.js';
+import { HeaderContext, loadLocal, saveLocal } from './common.js';
 import GameBoard, { type BoardZone } from './GameBoard.js';
 
 type Progress = Record<string, { completed?: boolean; skipped?: boolean; save?: string }>;
@@ -60,15 +60,17 @@ export function LessonPlayer({ id }: { id: string }) {
   const onInspect = def.tasks ? () => setState(s => (s ? lessonObserve(s, 'inspect') : s)) : undefined;
   return (
     <div className="lesson">
-      <header className="lesson-bar">
-        <div><p className="eyebrow">Lesson {index + 1} of {lessons.length}</p><h1>{def.title}</h1></div>
-        <div className="button-row">
-          <button type="button" onClick={() => setShowHint(h => !h)} aria-expanded={showHint}>Hint</button>
-          <button type="button" onClick={() => { setState(createLesson(id)); setShowHint(false); }}>Reset lesson</button>
-          {!state.completed && next && <a className="button-like" href={`#/learn/${next.id}`} onClick={() => { const p = readProgress(); p[id] = { ...p[id], skipped: true }; saveLocal(KEY, p); }}>Skip</a>}
-          <a className="button-like" href="#/learn">All lessons</a>
+      <HeaderContext>
+        <div className="room-head lesson-head">
+          <div className="room-title"><h1>{def.title}</h1><span className="badge">Lesson {index + 1} of {lessons.length}</span></div>
+          <div className="button-row">
+            <button type="button" onClick={() => setShowHint(h => !h)} aria-expanded={showHint}>Hint</button>
+            <button type="button" onClick={() => { setState(createLesson(id)); setShowHint(false); }}>Reset lesson</button>
+            {!state.completed && next && <a className="button-like" href={`#/learn/${next.id}`} onClick={() => { const p = readProgress(); p[id] = { ...p[id], skipped: true }; saveLocal(KEY, p); }}>Skip</a>}
+            <a className="button-like" href="#/learn">All lessons</a>
+          </div>
         </div>
-      </header>
+      </HeaderContext>
       {def.openHand && <p className="notice small"><b>Teaching foreknowledge:</b> this lesson tells you what your opponent will do. It is a scripted scenario, not private play.</p>}
       <div className="lesson-brief">
         <p><b>Objective:</b> {def.objective}</p>

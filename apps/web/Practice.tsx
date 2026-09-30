@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { applyTable, artIndex, createTable, projectTable, secureRandom, TableError, type TableCommand, type TableState } from '../../packages/tabletop/index.js';
 import { applyGame, chooseBotAction, createGame, projectGame, assertGameIntegrity, type GameAction, type GameState } from '../../packages/intrilex/index.js';
-import { Modal, loadLocal, saveLocal } from './common.js';
+import { HeaderContext, Modal, loadLocal, saveLocal } from './common.js';
 import { allTemplates, findTemplate } from './Library.js';
 import TableBoard from './TableBoard.js';
 import GameBoard from './GameBoard.js';
@@ -28,15 +28,17 @@ export function LocalTable({ templateId }: { templateId?: string }) {
   };
   return (
     <div className="room">
-      <header className="room-bar">
-        <div className="room-title"><h1>{template.title}</h1><span className="badge">Local practice</span></div>
-        <span className={`save-state save-${saved ? 'saved' : 'failed'}`} role="status">{saved ? 'Saved on this device' : 'Could not save (storage full?)'}</span>
-        <div className="button-row">
-          <label className="inline-field">View as<select value={seat} onChange={e => setSeat(Number(e.target.value))}>{Array.from({ length: template.seats }, (_, s) => <option key={s} value={s}>Seat {s + 1}</option>)}</select></label>
-          <label className="inline-field">Template<select value={template.id} onChange={e => { location.hash = `#/practice/table/${encodeURIComponent(e.target.value)}`; }}>{allTemplates().filter(t => t.profile !== 'intrilex-first-contact').map(t => <option key={t.id} value={t.id}>{t.title}</option>)}</select></label>
-          <button type="button" className="danger" onClick={() => setConfirm(true)}>Reset</button>
+      <HeaderContext>
+        <div className="room-head">
+          <div className="room-title"><h1>{template.title}</h1><span className="badge">Local practice</span></div>
+          <span className={`save-state save-${saved ? 'saved' : 'failed'}`} role="status">{saved ? 'Saved on this device' : 'Could not save (storage full?)'}</span>
+          <div className="button-row">
+            <label className="inline-field">View as<select value={seat} onChange={e => setSeat(Number(e.target.value))}>{Array.from({ length: template.seats }, (_, s) => <option key={s} value={s}>Seat {s + 1}</option>)}</select></label>
+            <label className="inline-field">Template<select value={template.id} onChange={e => { location.hash = `#/practice/table/${encodeURIComponent(e.target.value)}`; }}>{allTemplates().filter(t => t.profile !== 'intrilex-first-contact').map(t => <option key={t.id} value={t.id}>{t.title}</option>)}</select></label>
+            <button type="button" className="danger" onClick={() => setConfirm(true)}>Reset</button>
+          </div>
         </div>
-      </header>
+      </HeaderContext>
       <LocalBanner>Switch “View as” to practise hand privacy between seats on one screen.</LocalBanner>
       {template.profile === 'intrilex-core' && <p className="notice small">Core sandbox: automatic setup, manual play. Nothing here adjudicates Core rules.</p>}
       {error && <div className="toast" role="alert"><span>{error}</span><button type="button" className="icon-btn" aria-label="Dismiss" onClick={() => setError('')}>×</button></div>}
@@ -67,11 +69,13 @@ export function LocalFirstContact() {
   const act = (a: GameAction) => { try { setGame(g => applyGame(g, 0, a)); setError(''); } catch (e) { setError((e as Error).message); } };
   return (
     <div className="room">
-      <header className="room-bar">
-        <div className="room-title"><h1>First Contact practice</h1><span className="badge">vs. simple opponent</span></div>
-        <span className="save-state save-saved" role="status">Saved on this device</span>
-        <div className="button-row"><a className="button-like" href="#/learn">Lessons</a><button type="button" className="danger" onClick={() => setConfirm(true)}>New game</button></div>
-      </header>
+      <HeaderContext>
+        <div className="room-head">
+          <div className="room-title"><h1>First Contact practice</h1><span className="badge">vs. simple opponent</span></div>
+          <span className="save-state save-saved" role="status">Saved on this device</span>
+          <div className="button-row"><a className="button-like" href="#/learn">Lessons</a><button type="button" className="danger" onClick={() => setConfirm(true)}>New game</button></div>
+        </div>
+      </HeaderContext>
       <LocalBanner>The opponent plays only legal actions from its own view — it never sees your hand.</LocalBanner>
       {error && <div className="toast" role="alert"><span>{error}</span><button type="button" className="icon-btn" aria-label="Dismiss" onClick={() => setError('')}>×</button></div>}
       <GameBoard view={view} onAction={act} names={['You', 'Opponent']} hints={hints} onToggleHints={() => { setHints(!hints); saveLocal('tabletop.hints', !hints); }} />

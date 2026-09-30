@@ -1,4 +1,12 @@
-import { useEffect, useRef, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { createContext, useContext, useEffect, useRef, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
+
+export const HeaderSlot = createContext<HTMLDivElement | null>(null);
+/** Renders the current table/lesson context into the single app topbar instead of a second header row. */
+export function HeaderContext({ children }: { children: ReactNode }) {
+  const slot = useContext(HeaderSlot);
+  return slot ? createPortal(children, slot) : null;
+}
 
 export function Modal({ title, children, onClose, wide = false, describedBy }: { title: string; children: ReactNode; onClose: () => void; wide?: boolean; describedBy?: string }) {
   const ref = useRef<HTMLDialogElement>(null);

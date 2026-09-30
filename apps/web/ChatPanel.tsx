@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as RKeyboardEvent, type PointerEvent as RPointerEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { SOCIAL_LIMITS, type ChatEntry, type ChatPart, type RoomView } from '../../packages/protocol/index.js';
 import { RULES } from '../../packages/intrilex/rules.js';
 import { Modal } from './common.js';
@@ -12,6 +13,7 @@ export default function ChatPanel({ view, social, sendChat, retryChat, connected
   const [mobile, setMobile] = useState(() => matchMedia('(max-width: 860px)').matches);
   const [rule, setRule] = useState<string | null>(null);
   const [atBottom, setAtBottom] = useState(true);
+  const [tip, setTip] = useState(false);
   const [visible, setVisible] = useState(() => document.visibilityState === 'visible');
   const list = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -67,7 +69,10 @@ export default function ChatPanel({ view, social, sendChat, retryChat, connected
   };
   const chipLabel = (p: ChatPart) => p.type === 'mention' ? `@${view.participants.find(member => member.id === p.participantId)?.nickname ?? 'Participant'}` : p.type === 'rule' ? RULES[p.ruleId]?.title ?? 'Rule' : p.text;
   const content = <div className="chat-content">
-    <p className="chat-retention">Room chat is temporary: up to 100 entries, cleared after server restart or one hour of inactivity. Retry receipts last up to 10 minutes or 200 requests; a retry after eviction may duplicate a message.</p>
+    <div className="chat-retention">
+      <button type="button" className="icon-btn chat-info" aria-label="Chat retention info" aria-describedby="chat-retention-tip" aria-expanded={tip} onClick={() => setTip(v => !v)} onBlur={() => setTip(false)} onKeyDown={e => { if (e.key === 'Escape' && tip) { e.stopPropagation(); setTip(false); } }}>ⓘ</button>
+      <p className="chat-info-tip" role="tooltip" id="chat-retention-tip">Room chat is temporary: up to 100 entries, cleared after server restart or one hour of inactivity. Retry receipts last up to 10 minutes or 200 requests; a retry after eviction may duplicate a message.</p>
+    </div>
     {state.epochChanged && <p role="status">Earlier chat is unavailable: this room has a new chat session.</p>}
     {!connected && <p role="status">Disconnected. Your draft is kept; reconnect before sending or retrying.</p>}
     <div className="chat-messages" ref={list} aria-label="Room chat messages" onScroll={() => { const el = list.current; if (el) setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 30); }}>
@@ -101,11 +106,11 @@ export default function ChatPanel({ view, social, sendChat, retryChat, connected
     <button type="button" ref={trigger} className="chat-toggle" aria-expanded={open} aria-controls="room-chat" onClick={() => social.setCollapsed(!state.collapsed)}>Room chat{state.unread ? ` (${state.unread} unread)` : ''}</button>
     {open && (mobile ? <Modal title={selectedRule?.title ?? 'Room chat'} onClose={() => { if (selectedRule) setRule(null); else social.setCollapsed(true); }}>
       <div id="room-chat">{selectedRule ? <>{ruleContent}<p><button type="button" autoFocus onClick={() => setRule(null)}>Back to room chat</button></p></> : content}</div>
-    </Modal> : <aside ref={dock} className={dragging ? 'chat-dock chat-dragging' : 'chat-dock'} id="room-chat" aria-label="Room chat" style={pos ? { left: pos.x, top: pos.y, right: 'auto', bottom: 'auto' } : undefined}>
+    </Modal> : createPortal(<aside ref={dock} className={dragging ? 'chat-dock chat-dragging' : 'chat-dock'} id="room-chat" aria-label="Room chat" style={pos ? { left: pos.x, top: pos.y, right: 'auto', bottom: 'auto' } : undefined}>
       <header className="chat-head" title="Drag to move" onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragStop} onPointerCancel={dragStop} onLostPointerCapture={dragStop}>
         <span className="chat-head-title"><button type="button" className="chat-grip" aria-label="Move room chat. Drag the title bar, or use the arrow keys. Enter docks it in the corner." aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Enter" onKeyDown={gripKeys}>⠿</button><h2>Room chat</h2></span>
         <button type="button" className="icon-btn" aria-label="Collapse room chat" onClick={collapse}>×</button>
-      </header>{content}</aside>)}
+      </header>{content}</aside>, document.body))}
     {selectedRule && !(mobile && open) && <Modal title={selectedRule.title} onClose={() => setRule(null)}>{ruleContent}</Modal>}
   </>;
 }

@@ -3,7 +3,7 @@ import type { CreateRoomResponse, InvitesResponse, RoomView } from '../../packag
 import { artIndex } from '../../packages/tabletop/index.js';
 import { exportTemplate, type TableTemplate } from '../../packages/templates/index.js';
 import { api, ApiFailure, useRoom, type SaveStatus } from './api.js';
-import { Modal, Spinner, download, loadLocal, navigate, saveLocal } from './common.js';
+import { HeaderContext, Modal, Spinner, download, loadLocal, navigate, saveLocal } from './common.js';
 import { allTemplates } from './Library.js';
 import TableBoard from './TableBoard.js';
 import GameBoard from './GameBoard.js';
@@ -141,17 +141,19 @@ function RoomScreen({ initial }: { initial: RoomView }) {
   if (ended) return <section className="page narrow"><h1>{ended}</h1><p><a href="#/">Return home</a></p></section>;
   return (
     <div className="room">
-      <header className="room-bar">
-        <div className="room-title"><h1>{view.title}</h1><span className="badge">{PROFILE_LABEL[view.profile]}</span>{view.locked && <span className="badge badge-warn">Locked</span>}</div>
-        <span className={`save-state save-${status}`} role="status" aria-live="polite">{STATUS[status]}</span>
-        <span className="you-are">{view.you.seat === null ? 'Spectating' : `You: ${view.game ? `Player ${view.you.seat + 1}` : `Seat ${view.you.seat + 1}`}`}{host ? ' · host' : ''}</span>
-        <div className="button-row">
-          {host && <button type="button" className="primary" onClick={() => setPanel('invite')}>Invite</button>}
-          <button type="button" onClick={() => setPanel('people')}>People ({view.participants.length})</button>
-          <button type="button" onClick={() => setPanel('menu')}>Table menu</button>
-          <ChatPanel view={view} social={social} sendChat={sendChat} retryChat={retryChat} connected={connected} />
+      <HeaderContext>
+        <div className="room-head">
+          <div className="room-title"><h1>{view.title}</h1><span className="badge">{PROFILE_LABEL[view.profile]}</span>{view.locked && <span className="badge badge-warn">Locked</span>}</div>
+          <span className={`save-state save-${status}`} role="status" aria-live="polite">{STATUS[status]}</span>
+          <span className="you-are">{view.you.seat === null ? 'Spectating' : `You: ${view.game ? `Player ${view.you.seat + 1}` : `Seat ${view.you.seat + 1}`}`}{host ? ' · host' : ''}</span>
+          <div className="button-row">
+            {host && <button type="button" className="primary" onClick={() => setPanel('invite')}>Invite</button>}
+            <button type="button" onClick={() => setPanel('people')}>People ({view.participants.length})</button>
+            <button type="button" onClick={() => setPanel('menu')}>Table menu</button>
+            <ChatPanel view={view} social={social} sendChat={sendChat} retryChat={retryChat} connected={connected} />
+          </div>
         </div>
-      </header>
+      </HeaderContext>
       {error && <div className="toast" role="alert"><span>{error}</span><button type="button" className="icon-btn" aria-label="Dismiss" onClick={clearError}>×</button></div>}
       <Notifications social={social} participants={view.participants} />
       {view.profile === 'intrilex-core' && <p className="notice small">Core sandbox: setup was automatic; everything after is manual. Scores, markers and legality are maintained by the players — nothing here adjudicates Core rules. <a href="#/rules">Rule reference</a></p>}

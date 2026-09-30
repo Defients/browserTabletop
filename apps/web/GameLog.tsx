@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadLocal, saveLocal } from './common.js';
-import { LOG_STYLIZED_KEY, parseLogEntry, type LogToken, type ParsedLogEntry } from './logModel.js';
+import { LOG_STYLIZED_KEY, parseLogEntry, type LogKind, type LogToken, type ParsedLogEntry } from './logModel.js';
 
 export interface GameLogProps {
   /** Projected `GameView.history` lines (append-only, newest last). */
@@ -36,12 +36,25 @@ function Entry({ entry, nameOf }: { entry: ParsedLogEntry; nameOf: (seat: number
   return <span className="glog-text"><Tokens tokens={entry.tokens} nameOf={nameOf} /></span>;
 }
 
+/** HybriX "Game Log" tabs. Turn dividers and wins always render so the feed keeps its frame. */
+type LogTab = 'all' | 'actions' | 'effects' | 'system';
+const LOG_TABS: readonly { id: LogTab; label: string }[] = [
+  { id: 'all', label: 'All' }, { id: 'actions', label: 'Actions' }, { id: 'effects', label: 'Effects' }, { id: 'system', label: 'System' },
+];
+const TAB_KINDS: Record<Exclude<LogTab, 'all'>, ReadonlySet<LogKind>> = {
+  actions: new Set<LogKind>(['action', 'score', 'scuttle', 'draw', 'anchor', 'steal', 'exile', 'discard', 'counter']),
+  effects: new Set<LogKind>(['effect', 'reveal', 'phase', 'warn', 'denied', 'major']),
+  system: new Set<LogKind>(['setup', 'system']),
+};
+const ALWAYS: ReadonlySet<LogKind> = new Set<LogKind>(['turn', 'win']);
+
 /**
- * The "What happened?" event feed. Chronological, pinned to the newest entry while the user stays at
+ * The "Game Log" event feed. Chronological, pinned to the newest entry while the user stays at
  * the bottom; scrolling up releases the pin and a jump control offers the way back.
  */
 export default function GameLog({ history, open = true, nameOf }: GameLogProps) {
   const [stylized, setStylized] = useState(() => loadLocal<boolean>(LOG_STYLIZED_KEY, true));
+  const [tab, setTab] = useState<LogTab>('all');
   const [pinned, setPinned] = useState(true);
   const [unread, setUnread] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -53,6 +66,7 @@ export default function GameLog({ history, open = true, nameOf }: GameLogProps) 
   const baselineCount = baseline.current;
 
   const entries = useMemo(() => history.map(parseLogEntry), [history]);
+  const shown = useMemo(() => (tab === 'all' ? entries : entries.filter(e => ALWAYS.has(e.kind) || TAB_KINDS[tab].has(e.kind))), [entries, tab]);
 
   const scrollToEnd = () => { const el = scrollRef.current; if (el) el.scrollTop = el.scrollHeight; };
 
@@ -80,8 +94,11 @@ export default function GameLog({ history, open = true, nameOf }: GameLogProps) 
   return (
     <details className={`fc-history glog ${stylized ? '' : 'is-plain'}`} open={open}
       onToggle={e => { if ((e.target as HTMLDetailsElement).open) scrollToEnd(); }}>
-      <summary>What happened?{history.length > 0 && <span className="glog-count" aria-label={`${history.length} events`}>{history.length}</span>}</summary>
+      <summary>Game Log{history.length > 0 && <span className="glog-count" aria-label={`${history.length} events`}>{history.length}</span>}</summary>
       <div className="glog-toolbar">
+        <div className="glog-tabs" role="group" aria-label="Filter game log">
+          {LOG_TABS.map(t => <button type="button" key={t.id} className={`glog-tab ${tab === t.id ? 'is-active' : ''}`} aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label}</button>)}
+        </div>
         <label className="glog-toggle" title="Use colors and emphasis to make game events easier to scan.">
           <input type="checkbox" checked={stylized} onChange={e => toggle(e.target.checked)} />
           Stylized Text
@@ -89,9 +106,9 @@ export default function GameLog({ history, open = true, nameOf }: GameLogProps) 
       </div>
       <div className="glog-wrap">
         <div className="glog-scroll" role="log" aria-label="Game events" tabIndex={0} ref={scrollRef} onScroll={onScroll}>
-          {entries.length ? (
+          {shown.length ? (
             <ol className="glog-list">
-              {entries.map((entry, i) => (
+              {shown.map((entry, i) => (
                 <li key={i} className={`glog-item glog-k-${entry.kind}${stylized && i >= baselineCount ? ' is-new' : ''}`}>
                   {stylized ? <Entry entry={entry} nameOf={nameOf} /> : entry.kind === 'turn'
                     ? <div className="glog-turn"><span className="glog-turn-label">{entry.text}</span></div>

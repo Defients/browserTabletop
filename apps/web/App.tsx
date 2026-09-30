@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { serviceAvailable } from './api.js';
+import { HeaderSlot } from './common.js';
 import Home from './Home.js';
 import { CreateRoom, JoinRoom, RecoverRoom, RoomLoader } from './Online.js';
 import { LocalTable, LocalFirstContact } from './Practice.js';
@@ -24,6 +25,7 @@ function useHashRoute(): string[] {
 export default function App() {
   const route = useHashRoute();
   const [online, setOnline] = useState<boolean | null>(null);
+  const [slotEl, setSlotEl] = useState<HTMLDivElement | null>(null);
   useEffect(() => { let live = true; void serviceAvailable().then(ok => { if (live) setOnline(ok); }); return () => { live = false; }; }, []);
   const [page, a, b] = route;
 
@@ -32,7 +34,7 @@ export default function App() {
   const navigated = useRef(false);
   useEffect(() => {
     if (!navigated.current) { navigated.current = true; return; }
-    const h = document.querySelector<HTMLElement>('main h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
+    const h = document.querySelector<HTMLElement>('main h1') ?? document.getElementById('main'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
   }, [page, a]);
 
   let content;
@@ -56,22 +58,29 @@ export default function App() {
     </section>;
   }
   const wide = page === 'room' || page === 'practice' || (page === 'learn' && !!a) || page === 'templates';
+  // Inside a table the merged header carries connection/save state, so the global service dot is redundant there.
+  const inTable = page === 'room' || page === 'practice' || (page === 'learn' && !!a);
   return (
     <>
     <div className="ct-env" aria-hidden="true"><div className="ct-stars" /><div className="ct-orbit" /><div className="ct-orbit-2" /></div>
     <div className={`app ${wide ? 'app-wide' : ''}`}>
       <a className="skip-link" href="#main" onClick={e => { e.preventDefault(); document.getElementById('main')?.focus(); }}>Skip to content</a>
-      <header className="topbar">
-        <a href="#/" className="brand" aria-label={`${APP_NAME} home`}><span className="brand-mark" aria-hidden="true">◆</span>{APP_NAME}</a>
-        <nav aria-label="Main">
-          <a href={onlineHref('create')} aria-current={page === 'create' ? 'page' : undefined}>Create</a>
-          <a href={onlineHref('join')} aria-current={page === 'join' ? 'page' : undefined}>Join</a>
-          <a href="#/learn" aria-current={page === 'learn' ? 'page' : undefined}>Learn Intrilex</a>
-          <a href="#/rules" aria-current={page === 'rules' ? 'page' : undefined}>Rules</a>
-        </nav>
-        <span className={`service-dot ${STATIC_HOST ? '' : online === null ? '' : online ? 'is-on' : 'is-off'}`} role="status">{STATIC_HOST ? 'Play here · shared rooms on our multiplayer site' : online === null ? 'Checking service…' : online ? 'Online tables available' : 'Offline — local practice only'}</span>
-      </header>
-      <main id="main" tabIndex={-1}>{content}</main>
+      <HeaderSlot.Provider value={slotEl}>
+        <header className="topbar">
+          <a href="#/" className="brand" aria-label={`${APP_NAME} home`}><span className="brand-mark" aria-hidden="true">◆</span>{APP_NAME}</a>
+          <nav aria-label="Main">
+            <a href="#/practice/first-contact" aria-current={page === 'practice' ? 'page' : undefined}>Play</a>
+            <a href={onlineHref('create')} aria-current={page === 'create' ? 'page' : undefined}>Create</a>
+            <a href={onlineHref('join')} aria-current={page === 'join' ? 'page' : undefined}>Join</a>
+            <a href="#/learn" aria-current={page === 'learn' ? 'page' : undefined}>Learn</a>
+            <a href="#/rules" aria-current={page === 'rules' ? 'page' : undefined}>Rules</a>
+            <a href="#/templates" aria-current={page === 'templates' ? 'page' : undefined}>Decks</a>
+          </nav>
+          <div ref={setSlotEl} className="header-context" />
+          {!inTable && <span className={`service-dot ${STATIC_HOST ? '' : online === null ? '' : online ? 'is-on' : 'is-off'}`} role="status">{STATIC_HOST ? 'Play here · shared rooms on our multiplayer site' : online === null ? 'Checking service…' : online ? 'Online tables available' : 'Offline — local practice only'}</span>}
+        </header>
+        <main id="main" tabIndex={-1}>{content}</main>
+      </HeaderSlot.Provider>
     </div>
     </>
   );

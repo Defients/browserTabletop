@@ -1,5 +1,22 @@
 # Status
 
+## Chat retention notice compressed to info tooltip — September 29, 2026
+
+The "Room chat is temporary…" paragraph at the top of the chat panel is replaced by a compact `ⓘ` icon button at the top-right of the chat content. The full notice now lives in a `role="tooltip"` bubble revealed on hover or focus, and toggled by click for touch (`aria-expanded`, Escape dismisses, blur resets); `aria-describedby` keeps the text in the button's accessible description. The button is labelled "Chat retention info" so it cannot collide with the `/^Room chat/` trigger lookup used by tests and the UI.
+
+Changes: `apps/web/ChatPanel.tsx` (icon + tooltip markup, `tip` state), `.chat-retention`/`.chat-info`/`.chat-info-tip` styles in `styles.css`, `e2e/social.spec.ts` `openChat` hovers the icon before asserting the notice text.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| `npm run build` | PASS |
+| Playwright e2e `social.spec.ts` (Chromium) | 7/8 PASS incl. axe at three viewports — the 390×844 `scrollWidth` check fails identically with this change reverted: pre-existing overflow from the uncommitted HybriX board work (`fc-surface`/`hx-*` extend to ~457px), not from this edit |
+
+No commit, push, or public deployment occurred.
+
 ## Game log ("What happened?") semantic feed — September 29, 2026
 
 The history panel in `GameBoard` is now a `GameLog` component: chronological feed pinned to the newest entry, `Turn N: Player M.` engine lines render as compact turn dividers, and every line is classified into a semantic kind (score, scuttle, denied, counter, major rule moments, steal, exile, draw, reveal, discard, anchor, warn, phase, effect, win, setup, system) by an ordered pattern table in `apps/web/logModel.ts`. `Player N` tokens render as the seat's display name with a seat color (`--log-p0` cyan / `--log-p1` orange, CosmoTech-derived; no authoritative seat colors existed), card names carry suit tone, and counts use tabular figures. Significant kinds get a restrained left accent; wins get ★ + violet wash. A "Stylized Text" checkbox (default ON, persisted as `tabletop.logStylized` via `loadLocal`/`saveLocal`) switches to a neutral presentation that preserves the original prose verbatim. New entries fade in only if they arrive after mount; the scroll region is `role="log"`, keyboard-focusable, and scrolling up unpins with a `↓ N new events` jump control. Empty state shows "Game events will appear here."

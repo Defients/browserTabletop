@@ -3,12 +3,12 @@
   "cards": 108,
   "seats": 8,
   "tableCardsRendered": 60,
-  "firstRenderMs": 92,
+  "firstRenderMs": 224,
   "moveRoundTripMs": {
-    "median": 136,
-    "max": 154
+    "median": 60,
+    "max": 161
   },
   "boardMutationsDuringCursorStorm": 0,
-  "measuredAt": "2026-09-29T23:01:53.490Z",
+  "measuredAt": "2026-09-30T01:11:37.776Z",
   "environment": "win32 x64, Node v24.21.0, local loopback"
 }

@@ -156,7 +156,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
             return (
               <div key={c.id} className={`fc-slot ${c.hostId ? 'is-attached' : ''}`}>
                 <span className="fc-card-wrap">
-                  <CardFace rank={c.rank} suit={c.suit} tapped={c.tapped} attached={!!c.hostId} selected={selected === c.id} highlight={focusTargets.has(c.id) || view.legalActions.some(a => a.targetId === c.id)}
+                  <CardFace rank={c.rank} suit={c.suit} tapped={c.tapped} attached={!!c.hostId} variant={zone === 'pr' ? 'point-row' : undefined} selected={selected === c.id} highlight={focusTargets.has(c.id) || view.legalActions.some(a => a.targetId === c.id)}
                     extraLabel={c.hostId ? `Jack attached to ${cardName(cards.find(x => x.id === c.hostId) ?? view.players[p]!.pr.find(x => x.id === c.hostId) ?? { rank: undefined })}` : undefined}
                     onClick={() => pick(c)} onDoubleClick={() => { setInspect(c); onInspectCard?.(); }} />
                   <span className="fc-flags">

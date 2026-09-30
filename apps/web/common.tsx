@@ -45,17 +45,19 @@ export function suitSpans(text: string) {
 
 export interface FaceProps {
   rank?: string; suit?: string; image?: string; tapped?: boolean; locked?: boolean; attached?: boolean; revealed?: boolean;
-  selected?: boolean; size?: 'sm' | 'md' | 'lg'; extraLabel?: string;
+  selected?: boolean; size?: 'sm' | 'md' | 'lg'; extraLabel?: string; variant?: 'point-row';
   onClick?: () => void; onDoubleClick?: () => void; onKeyDown?: (e: ReactKeyboardEvent) => void; tabIndex?: number; highlight?: boolean;
 }
 /** A card face or back. Accessible names never include a face the viewer cannot see. */
-export function CardFace({ rank, suit, image, tapped, locked, attached, revealed, selected, size = 'md', extraLabel, onClick, onDoubleClick, onKeyDown, tabIndex, highlight }: FaceProps) {
+export function CardFace({ rank, suit, image, tapped, locked, attached, revealed, selected, size = 'md', extraLabel, variant, onClick, onDoubleClick, onKeyDown, tabIndex, highlight }: FaceProps) {
   const hidden = !rank;
   const joker = rank === 'RJ' || rank === 'BJ';
   const label = [cardName({ rank, suit }), tapped && 'tapped', locked && 'locked', attached && 'attached', revealed && 'revealed to you', extraLabel].filter(Boolean).join(', ');
-  const cls = ['card', `card-${size}`, hidden ? 'card-back' : '', isRed(rank, suit) ? 'card-red' : '', joker ? 'card-joker' : '', selected ? 'is-selected' : '', tapped ? 'is-tapped' : '', highlight ? 'is-highlight' : ''].filter(Boolean).join(' ');
+  const cls = ['card', `card-${size}`, variant === 'point-row' ? 'card-pr' : '', hidden ? 'card-back' : '', isRed(rank, suit) ? 'card-red' : '', joker ? 'card-joker' : '', selected ? 'is-selected' : '', tapped ? 'is-tapped' : '', highlight ? 'is-highlight' : ''].filter(Boolean).join(' ');
   const glyph = joker ? '★' : suitSymbol(suit) || (suit ? suit.slice(0, 1).toUpperCase() : '');
-  const inner = hidden ? <span className="card-back-mark" aria-hidden="true" /> : image ? <img src={image} alt="" draggable={false} /> : (
+  const inner = hidden ? <span className="card-back-mark" aria-hidden="true" /> : image ? <img src={image} alt="" draggable={false} /> : variant === 'point-row' ? (
+    <span className="card-pr-face" aria-hidden="true"><span className="card-pr-rank">{rank}</span><span className="card-pr-suit">{glyph}</span></span>
+  ) : (
     <>
       <span className="card-corner" aria-hidden="true">{joker ? (rank === 'RJ' ? 'R' : 'B') : rank}<small>{glyph}</small></span>
       <span className="card-center" aria-hidden="true">{joker ? <span className="joker-word">{rank === 'RJ' ? 'RED' : 'BLACK'}<br />JOKER</span> : glyph}</span>

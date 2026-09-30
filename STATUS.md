@@ -1,5 +1,24 @@
 # Status
 
+## Point Row card tiles — landscape rank+suit renderer — September 30, 2026
+
+Point Row cards no longer render as miniature portrait playing cards inside oversized slots. `CardFace` gained a `variant="point-row"` (applied only by `boardRow` for `zone === 'pr'` in `GameBoard.tsx`; Enduring Row, hand, stack, Swap Bar, trays and TableBoard are untouched) that drops the duplicate corner indices and renders a single centered rank+suit composition on the normal light card surface — red suits keep `.card-red`, jokers render `RJ★`/`BJ★`, backs still show `card-back-mark`, and all state classes/ARIA labels are unchanged (selection, tap, highlight, click/double-click behavior preserved).
+
+`.fc-pr .fc-slot` is now an inline-size query container: the tile is `width: min(88cqw, 190px)` at `aspect-ratio: 1.85/1` with rank+suit type at `clamp(.95rem, 24cqw, 2.9rem)`. In the viewport-locked desktop shell the tile additionally caps its width by the row-height container (`calc((100cqh - 8px) * 1.85)` — `cqh` resolves to `.fc-row` because `.fc-slot` only accepts inline-axis queries), so it fills the slot in short rows without overflowing. `.card-pr.is-tapped` keeps the 90° tap rotation but scales to `.44` so the wider footprint stays inside the slot.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| `npm run build` | PASS |
+| Node tests | PASS — 212/212 |
+| Responsive spec (Chromium + Firefox) | PASS — 16/16 at 1024×576 → 2560×1440 |
+| Visual inspection | Live First Contact room with cards in both PRs at 1440×900, 1024×576, 2560×1440 and 390×844 — rank+suit dominant and centered, `2♥`/`4♥` red (`artifacts/shots/pr-*.png`) |
+
+No commit, push, or public deployment occurred.
+
 ## Action Families — semantic Possible Moves — September 29, 2026
 
 The Legal Actions panel no longer lists every serialized rules-engine action. A pure presentation adapter (`packages/intrilex/presentation.ts`) groups compatible legal actions into **Action Families** via declarative specs keyed on structured fields (`type`, `cardId(s)`, `targetId(s)`, `mode` prefixes) — never label text — and `apps/web/ActionPanel.tsx` renders them: single-variant entries stay one-click rows; single-parameter families (choices, face-up swap draw, ≤8-variant voltage guesses) expand inline quick options; multi-parameter families (Swap Bar, Scuttle, Counter, Ultras, Supers/composites, per-card effect modes, multi-card costs like Deep Draw) open a drill-down **Action Composer** that keeps the board visible.

@@ -1,4 +1,21 @@
-# Latest handoff: Action Families — semantic Possible Moves
+# Latest handoff: Point Row landscape card tiles
+
+Updated September 30, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+Point Row cards are now wide landscape tiles — a magnified rank+suit slice instead of a mini portrait card floating in an oversized slot. `CardFace` (`apps/web/common.tsx`) accepts `variant="point-row"`, which swaps the corner-index layout for a centered `rank + suit` face while preserving every state class and accessible name; `GameBoard.tsx` `boardRow` passes it only for `zone === 'pr'`. Sizing lives in `styles.css`: `.fc-pr .fc-slot` is an inline-size container and `.card-pr` is `min(88cqw, 190px)` at 1.85:1; the desktop viewport-locked shell adds a row-height cap via `cqh` (which still resolves to `.fc-row`, since `.fc-slot` accepts only inline-axis queries). Tapped tiles rotate 90° at `.44` scale so they stay inside the slot.
+
+Gates: lint, typecheck, 212/212 Node tests, build, responsive e2e 16/16 (Chromium + Firefox). Visual: `artifacts/shots/pr-*.png` across 576p/900p/1440p and 390px narrow — red suits verified. Recorded in `STATUS.md`. No commit, push, or deployment.
+
+### Ranked next steps
+
+1. Implement the Reveals gap (`projectGame` `revealedHand`; expire `revealed` at Start with handle rotation).
+2. Continue expanding Full coverage per `docs/INTRILEX_FULL_AUDIT.md` (Voltage, BJ recycle, Sudden Death endgame).
+3. Obtain rules-owner rulings for source-map D-1 and D-3.
+4. Configure/deploy the separate multiplayer server only when authorized; keep the Neocities server origin blank.
+
+---
+
+# Previous handoff: Action Families — semantic Possible Moves
 
 Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
 

@@ -334,6 +334,23 @@ span.card { cursor: default; }
 .card-badge-left { left: 2px; right: auto; }
 .inspect-card { display: grid; place-items: center; padding: .5rem; }
 
+/* Point Row tiles: a magnified landscape rank+suit slice rather than a shrunken
+   portrait card. PR slots are inline-size query containers so tile and type both
+   scale off the slot track (cqw); the viewport-locked shell additionally caps the
+   width by row height (cqh still resolves to .fc-row — .fc-slot only accepts
+   inline-axis queries). */
+.fc-pr .fc-slot { container-type: inline-size; }
+.card-pr {
+  flex-direction: row; align-items: center; justify-content: center;
+  width: min(88cqw, 190px); height: auto; aspect-ratio: 1.85 / 1;
+  padding: .06em .3em; font-size: clamp(.95rem, 24cqw, 2.9rem);
+}
+.card-pr-face { display: inline-flex; align-items: baseline; justify-content: center; gap: .16em; line-height: 1; }
+.card-pr-rank { font-weight: 800; font-variant-numeric: tabular-nums; }
+.card-pr-suit { font-size: .94em; }
+/* A wide tile rotated 90° would outgrow its slot; the scaled turn still reads "tapped". */
+.card-pr.is-tapped { transform: rotate(90deg) scale(.44); }
+
 /* ── Free table: void deck with technical grid ── */
 .table-shell { display: flex; flex-direction: column; gap: .5rem; }
 .board-toolbar { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
@@ -882,6 +899,10 @@ span.card { cursor: default; }
     --card-h: min(var(--hx-board-card-max), calc(100cqh - 6px));
     --card-w: calc(var(--card-h) * .7222);
     font-size: clamp(.5rem, 22cqh, .82rem);
+  }
+  .app-wide .room .fc-pr .card-pr {
+    width: min(88cqw, calc((100cqh - 8px) * 1.85), 190px);
+    font-size: clamp(.8rem, min(24cqw, calc((100cqh - 8px) * .5)), 2.9rem);
   }
   .app-wide .room .fc-row-name { font-size: clamp(.5rem, 1.05dvh, .62rem); }
 

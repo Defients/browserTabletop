@@ -77,6 +77,8 @@ All lessons run on the real engine from fixed positions (`packages/intrilex/less
 
 The Core template reproduces §2–3: random Player A (5 cards) and B (6), Swap Bar 2 face-down + 1 face-up after the hands, Goals 21, PR/ER per player, DP, GY, Exile, plus manual counters (Secured PR, Mini-Turns, Exhaust, Board Lock) and markers (Tapped, Aegis, Revealed, Exile-Bound, Jacked, Disrupted, Skip). Everything after setup is manual; the UI states this on every Core view.
 
+The rulebook fixes the Swap Bar's initial counts (§2, §21.3) but not their positions; the rules owner directs the face-up card to sit in the middle slot, flanked by the two face-down cards (Slot 1 down · Slot 2 up · Slot 3 down). Engine setup and the Core template both use this arrangement.
+
 ## Full rules-assisted audit — September 29, 2026
 
 The separate `intrilex-full` profile targets standard two-player Core (§2, Parts I–VI), with optional modules disabled (Part VIII introduction). The full source-family checklist, declaration/resolution/projection seams, and verification boundary are in [INTRILEX_FULL_AUDIT.md](INTRILEX_FULL_AUDIT.md). That checklist is a requirements audit; it does not certify implementation coverage. See the latest `STATUS.md` for actual executed gates.

@@ -1,5 +1,113 @@
 # Status
 
+## Pending Plays capped + larger stack cards — September 29, 2026
+
+The Pending Plays panel previously grew to fill all leftover left-rail height (`flex: 1 1 0%`), so even an empty "STACK CLEAR" stretched hundreds of pixels. It now sizes to content (`flex: 0 1 auto`) and caps at `max-height: min(26rem, 42dvh)` — roughly four entries — scrolling internally past that, which matches the stack's realistic 3–5-item depth. Stack cards grew from 34×46px to a `--hx-stack-card-h` token (`clamp(52px, 7.5dvh, 80px)`, DENSE floor 54px), so a pending play's card is clearly legible.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| `npm run build` | PASS |
+| Responsive spec (Chromium + Firefox) | PASS — 16/16 |
+| Visual inspection | Left rail at 1920×1080 (pending item, 58×80 card) and 1024×576 (empty stack ≈74px, no rail-filling dead zone inside the panel) |
+
+No commit, push, or public deployment occurred.
+
+## Possible Moves bounded scroller + action-badge alignment — September 29, 2026
+
+Follow-up to the viewport-native board: the Possible Moves list (`.fc-actions`) is now the `.fc-panel` elastic region — `flex: 1 1 auto; min-height: 6.5rem; overflow-y: auto; overscroll-behavior: contain` — claiming leftover rail height and scrolling internally with the app's styled thin scrollbar instead of growing the panel/page. Suggested Moves yields first inside the panel (`flex: 0 2 auto`, its `<ol>` is the internal scroller so the heading/advice never clip); the open Game Log yields fastest (`flex: 0 5 auto`, becomes a flex column so `.glog-scroll` tracks the shrunk `<details>` height). The whole-panel scroll remains as the final backstop.
+
+Action buttons' number+icon badges no longer clip: both pseudo-elements are pinned from `top` inside a fixed centered 2rem gutter (icon was `bottom:`-anchored and collided with the number on short buttons), with `min-height: 2.3rem` on `.fc-actions .action-btn` guaranteeing the stack fits.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| `npm run build` | PASS |
+| Responsive spec (Chromium + Firefox) | PASS — 16/16 |
+| `social.spec.ts` (Chromium + Firefox) | PASS — 16/16 |
+| Visual inspection | Practice board with populated Possible Moves at 1366×768 / 1024×576 / 1920×1080 — bounded scrollable list, unclipped badges, Suggested Moves + Game Log still visible |
+
+No commit, push, or public deployment occurred.
+
+## Viewport-native gameboard — responsive density refactor — September 29, 2026
+
+The HybriX board previously used fixed pixel dimensions: at ~1024×576 the hand tray and lower board fell below the fold, forcing page-level scroll; larger displays kept the same static sizing. The board is now a viewport-locked shell with height-driven density tokens — no document scrolling at any tested desktop resolution, no global `transform: scale()`, no JS resize listeners.
+
+### Root causes fixed
+
+- `.room` inside `.app-wide` had only `min-height: 100%` — after state updates, the board's max-content contribution grew the room (and document) past the viewport. Now `height: 100%` with `overflow-y: auto`, so genuine overflow scrolls inside the room.
+- `.fc-layout`/`fc-field`/`fc-row` and both rails lacked `min-height: 0`, letting intrinsic content force grid/flex tracks taller. Battlefield rows were fixed `padding`+`min-height` boxes; card status flags consumed extra vertical space below each card.
+- Rail panels (`fc-panel` sticky, `hx-stack`) had document-anchored `100vh` max-heights and no internal scroll contract.
+
+### Changes
+
+- `apps/web/styles.css` — `--hx-*` density tokens (`clamp()`/`dvh`) for gaps, padding, row name band, hand card, trays, fans, swap cards; `@media (min-width: 861px)` viewport shell (`.app-wide` `100dvh`, `main` sole page scroller, `.room` bounded flex column); `.fc-layout` becomes `grid-template-rows: auto minmax(0,1fr)` inside the room; rails scroll internally with `.hx-stack` (Pending Plays) and `.fc-panel` (Legal Actions) as flex anchors; `.fc-row` is a `container-type: size` container whose cards size off `100cqh`; `.fc-flags` overlay; COMPACT (`max-height: 720px`) hides secondary helper copy, DENSE (`max-height: 580px`) additionally re-floors the tokens and collapses seat/swap captions. Width breakpoints ≤1100px now leave card sizes to the height-driven tokens.
+- `apps/web/GameBoard.tsx` — battlefield cards wrapped in `.fc-card-wrap` with `.fc-flags` overlaying Jack/anchor/Aegis/Jacked/tapped flags; flags no longer cost row height.
+- `e2e/responsive.spec.ts` (new) — 8 resolutions × both browsers: document scrollHeight/scrollWidth ≤ client + 2px, bounding boxes of `.fc-status`, `.hx-left`, `.hx-stack` (Pending Plays), `.fc-surface`, `.fc-center` (piles), `.fc-hand`, `.hx-right`, `.hx-ophand`, `.fc-panel` (Legal Actions) inside the viewport, all 4 rows > 20px, scrimmage visible, zero console errors.
+- `e2e/server.ts` — `watchErrors` console filter now also matches Firefox's "can't establish a connection to the server at ws://…" wording for the socket interruptions the filter already intentionally ignores (Chromium's wording was already covered). No assertion weakened.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| Node tests | PASS — 199/199 |
+| `npm run build` | PASS |
+| Responsive spec (Chromium) | PASS — 8/8 |
+| Responsive spec (Firefox) | PASS — 8/8 |
+| Playwright e2e (Chromium + Firefox) | PASS — 58/58 |
+| Visual inspection | Full-profile room + First Contact mid-game at 1024×576 / 1366×768 / 1920×1080 / 2560×1440 — complete board in viewport, occupied rows render cards + overlay flags correctly |
+
+No commit, push, or public deployment occurred.
+
+## Swap Bar initial placement: face-up in Slot 2 — September 29, 2026
+
+Per the rules owner's direction, the Swap Bar's initial three cards are now placed face-down · face-up · face-down — the single face-up card sits in the middle slot (Slot 2) in both the rules-assisted Full profile and the Core sandbox. §2/§21.3 fix the counts (2 down + 1 up for two players) but not positions; the interpretation is recorded in `docs/INTRILEX_SOURCE_MAP.md`.
+
+Changes: `packages/intrilex/engine.ts` `createGame` deals `[down, up, down]`; `packages/templates/index.ts` splits the Core `place` ops into down → up → down; `packages/tabletop/index.ts` `transfer` offsets table placement by cards already in the target zone so sequential `place` ops lay out left-to-right instead of stacking at one x. Assertions in `tests/tabletop.test.ts` and `tests/intrilex.full.test.ts` updated to the new order.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| Node tests | PASS — 199/199 |
+| `npm run build` | PASS |
+
+No commit, push, or public deployment occurred.
+
+## Merged single application header + HybriX board — September 29, 2026
+
+The two stacked header rows (app nav `Tabletop|Play|…`, then a separate `.room-bar`/`.lesson-bar`) are merged into ONE `.topbar`. `common.tsx` adds a `HeaderSlot` context + `HeaderContext` portal; `App.tsx` owns the only `<header class="topbar">` and renders a `.header-context` slot between the nav and the (now conditional) service dot. `Online.tsx`, `Practice.tsx` (both local headers) and `Learn.tsx` render their title/badge/`save-state`/`you-are`/controls into that slot, so no second navbar exists on any route. Inside a table the global "Online tables available" dot is suppressed — the room's `.save-state` chip already reports connection state. Medium widths shrink gaps/padding first; ≤520px hides only `.you-are` (secondary). Desktop height ≈56px.
+
+The gameboard itself is now the HybriX three-column layout in `GameBoard.tsx`: left rail (P2/P1 summaries + Swap Bar + Pending Plays/Stack with `STACK CLEAR` empty state), center (status strip, four rows — P2 ER, P2 PR, Line of Scrimmage, P1 PR, P1 ER — landscape Draw/Graveyard/Exile trays, `Your Hand` tray with scroll arrows and 1–5/6–7/8–10/10+ density), right rail (Opponent Hand fan, `Legal Actions (N)`, `Game Log` with All/Actions/Effects/System tabs). Mini-Turns are read-only (`n / 3` Full). No debug +/- controls, no duplicated Swap Bar/Pending Plays, no permanent extra slots — 5th/6th slots render only when occupied. All engine wiring, projections, `[data-zone]`, `.zone-pick`, `action-*` classes, `.fc-history`, and chat behavior are unchanged.
+
+Fixes during verification: `.fc-actions` nested scroll reverted (clipped buttons under Playwright hit-testing); `.header-context` flex-basis and `.hx-hand-wrap` grid `minmax(0,1fr)` fixed the 390px `scrollWidth` overflow; chat dock portals to `document.body` (topbar `backdrop-filter` would otherwise contain the fixed dock); `scripts/shots.ts` selector updated `.room-bar`→`.room-head`; ad-hoc debug scripts removed.
+
+Test-harness fix (not a rules change): `e2e/social.spec.ts` rate-limit step no longer depends on UI click speed racing the server's 10s window. The host page now tracks sockets too, and six `chat-send` fillers are fired in one `page.evaluate` over the already-authenticated room socket — the window fills in milliseconds regardless of browser pacing. Assertions unchanged: 7th send shows "Message failed.", draft is preserved, explicit retry after the window delivers it.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| Node tests | PASS — 199/199 |
+| `npm run build` | PASS |
+| Playwright e2e (Chromium + Firefox) | PASS — 42/42; one transient Firefox `Browser.removeBrowserContext` protocol error during context-close teardown (post-assertion cleanup, infra flake) passed on retry |
+| Responsive | `scrollWidth` = viewport at 390px; header stays one row at 1440/1366/1024 |
+| Visual inspection | `artifacts/shots/` — merged header on room + lesson routes at 1440 and 390; no console errors |
+
+No commit, push, or public deployment occurred.
+
 ## Chat retention notice compressed to info tooltip — September 29, 2026
 
 The "Room chat is temporary…" paragraph at the top of the chat panel is replaced by a compact `ⓘ` icon button at the top-right of the chat content. The full notice now lives in a `role="tooltip"` bubble revealed on hover or focus, and toggled by click for touch (`aria-expanded`, Escape dismisses, blur resets); `aria-describedby` keeps the text in the button's accessible description. The button is labelled "Chat retention info" so it cannot collide with the `/^Room chat/` trigger lookup used by tests and the UI.

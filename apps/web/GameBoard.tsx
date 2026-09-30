@@ -117,14 +117,18 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
             if (!c) return <span key={`empty-${i}`} className="hx-slot" aria-hidden="true" />;
             return (
               <div key={c.id} className={`fc-slot ${c.hostId ? 'is-attached' : ''}`}>
-                <CardFace rank={c.rank} suit={c.suit} tapped={c.tapped} attached={!!c.hostId} selected={selected === c.id} highlight={view.legalActions.some(a => a.targetId === c.id)}
-                  extraLabel={c.hostId ? `Jack attached to ${cardName(cards.find(x => x.id === c.hostId) ?? view.players[p]!.pr.find(x => x.id === c.hostId) ?? { rank: undefined })}` : undefined}
-                  onClick={() => pick(c)} onDoubleClick={() => { setInspect(c); onInspectCard?.(); }} />
-                {c.hostId && <span className="fc-tag">Jack</span>}
-                {zone === 'er' && !c.hostId && <span className="fc-tag" title={`Anchor value ${anchorValue(c)}`}>⚓ {anchorValue(c)}</span>}
-                {full && (c.aegis !== undefined || c.exileBound || c.wildBound || c.playedForEffect) && <span className="full-card-states">{[c.aegis !== undefined && 'Aegis', (c.exileBound || c.wildBound) && 'Exile-bound', c.playedForEffect && 'Played for Effect'].filter(Boolean).join(' · ')}</span>}
-                {zone === 'pr' && view.players[p]!.er.some(j => j.hostId === c.id) && <span className="fc-tag fc-tag-jacked">Jacked +1</span>}
-                {c.tapped && <span className="fc-tag fc-tag-tapped" title={tapTitle(c, p)}>{tapTag(c, p)}</span>}
+                <span className="fc-card-wrap">
+                  <CardFace rank={c.rank} suit={c.suit} tapped={c.tapped} attached={!!c.hostId} selected={selected === c.id} highlight={view.legalActions.some(a => a.targetId === c.id)}
+                    extraLabel={c.hostId ? `Jack attached to ${cardName(cards.find(x => x.id === c.hostId) ?? view.players[p]!.pr.find(x => x.id === c.hostId) ?? { rank: undefined })}` : undefined}
+                    onClick={() => pick(c)} onDoubleClick={() => { setInspect(c); onInspectCard?.(); }} />
+                  <span className="fc-flags">
+                    {c.hostId && <span className="fc-tag">Jack</span>}
+                    {zone === 'er' && !c.hostId && <span className="fc-tag" title={`Anchor value ${anchorValue(c)}`}>⚓ {anchorValue(c)}</span>}
+                    {full && (c.aegis !== undefined || c.exileBound || c.wildBound || c.playedForEffect) && <span className="full-card-states">{[c.aegis !== undefined && 'Aegis', (c.exileBound || c.wildBound) && 'Exile-bound', c.playedForEffect && 'Played for Effect'].filter(Boolean).join(' · ')}</span>}
+                    {zone === 'pr' && view.players[p]!.er.some(j => j.hostId === c.id) && <span className="fc-tag fc-tag-jacked">Jacked +1</span>}
+                    {c.tapped && <span className="fc-tag fc-tag-tapped" title={tapTitle(c, p)}>{tapTag(c, p)}</span>}
+                  </span>
+                </span>
               </div>
             );
           })}

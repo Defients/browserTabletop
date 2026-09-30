@@ -322,12 +322,13 @@ class Context {
 
   transfer(from: Zone, to: Zone, count: number, faceUp: boolean) {
     if (from.id === to.id) fail('INVALID_TARGET');
+    const base = this.s.order[to.id]!.length;
     for (let i = 0; i < count; i++) {
       const id = this.s.order[from.id]!.at(-1);
       if (!id) break;
       const c = this.s.cards[id]!;
       this.place(c, to, 'top', faceUp);
-      if (to.kind === 'table') { c.x = clamp(to.x + 10 + i * (CARD_WIDTH + 10), 0, this.s.width - CARD_WIDTH); c.y = clamp(to.y + 20, 0, this.s.height - CARD_HEIGHT); }
+      if (to.kind === 'table') { c.x = clamp(to.x + 10 + (base + i) * (CARD_WIDTH + 10), 0, this.s.width - CARD_WIDTH); c.y = clamp(to.y + 20, 0, this.s.height - CARD_HEIGHT); }
     }
   }
 

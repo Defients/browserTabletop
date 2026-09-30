@@ -74,7 +74,7 @@ function intrilex(core: boolean): TableTemplate {
   const setup: SetupOperation[] = [
     { op: 'shuffle', zone: 'deck' }, { op: 'choose-first-seat' },
     { op: 'deal-seat', zone: 'deck', seat: 'first', count: 5 }, { op: 'deal-seat', zone: 'deck', seat: 'second', count: 6 },
-    ...(core ? [{ op: 'place', zone: 'deck', target: 'swap', count: 2, faceUp: false }, { op: 'place', zone: 'deck', target: 'swap', count: 1, faceUp: true }] as SetupOperation[] : []),
+    ...(core ? [{ op: 'place', zone: 'deck', target: 'swap', count: 1, faceUp: false }, { op: 'place', zone: 'deck', target: 'swap', count: 1, faceUp: true }, { op: 'place', zone: 'deck', target: 'swap', count: 1, faceUp: false }] as SetupOperation[] : []),
   ];
   const markers = core ? ['Tapped', 'Aegis', 'Revealed', 'Exile-Bound', 'Jacked', 'Disrupted', 'Skip'].map((t, i) => token(`marker-${i}`, t, 1200, 560 + i * 44)) : [];
   return {

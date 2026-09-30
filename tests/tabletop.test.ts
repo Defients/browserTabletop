@@ -30,7 +30,7 @@ test('setup: Core sandbox deals 5/6 by random first seat and builds Swap Bar 2 f
     assert.equal(s.order[`hand-${1 - first}`]!.length, 6);
     const swap = s.order.swap!.map(id => s.cards[id]!);
     assert.equal(swap.length, 3);
-    assert.deepEqual(swap.map(c => c.faceUp), [false, false, true]);
+    assert.deepEqual(swap.map(c => c.faceUp), [false, true, false]);
     assert.equal(s.order.deck!.length, 54 - 11 - 3);
     assert.equal(s.objects.find(o => o.id === 'goal-0')!.value, 21);
     // Face-down Swap Bar cards are hidden from both players and spectators.

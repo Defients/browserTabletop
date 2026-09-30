@@ -18,7 +18,7 @@ test('Full §2 setup: 54 unique cards, two players, random A 5/B 6, Goal 21 and 
     assert.equal(s.players[s.activePlayer]!.hand.length, 5);
     assert.equal(s.players[1 - s.activePlayer]!.hand.length, 6);
     assert.deepEqual(s.players.map(p => p.goal), [21, 21]);
-    assert.deepEqual(s.swapBar!.map(c => c.faceUp), [false, false, true]);
+    assert.deepEqual(s.swapBar!.map(c => c.faceUp), [false, true, false]);
     assert.equal(s.deck.length, 40);
     assert.equal(s.exile!.length, 0);
     assert.equal(s.graveyard.length, 0);

@@ -522,7 +522,7 @@ export function createGame(options: CreateOptions = {}): GameState {
   }
   for (let i = 0; i < 5; i++) toHand(g, first, g.s.deck.shift()!);
   for (let i = 0; i < 6; i++) toHand(g, opp(first), g.s.deck.shift()!);
-  if (full(g.s))for(const faceUp of [false,false,true]){const card=g.s.deck.shift()!;card.id=newId(g);g.s.swapBar!.push({card,faceUp});}
+  if (full(g.s))for(const faceUp of [false,true,false]){const card=g.s.deck.shift()!;card.id=newId(g);g.s.swapBar!.push({card,faceUp});}
   g.s.activePlayer = first; g.s.priority = first;
   if (full(g.s)) log(g, `Intrilex Full: 54 cards, Goal 21. ${P(first)} is Player A (5 cards) and goes first; ${P(opp(first))} has 6. Swap Bar: two face-down, one face-up.`);
   else log(g, `First Contact: 54 cards, Goal 15. ${P(first)} is Player A (5 cards) and goes first; ${P(opp(first))} has 6.`);

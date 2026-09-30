@@ -1,8 +1,35 @@
-# Latest handoff: Game Log restyle + "Stylized Text" toggle
+# Latest handoff: Viewport-native gameboard (responsive density)
 
 Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
 
-The "What happened?" panel in `GameBoard` is now a real component, `apps/web/GameLog.tsx`: chronological feed with bottom-pinning + `↓ N new events` jump control, `Turn N:` lines as compact dividers, kind-coded entries, seat-colored player names (display names, not "Player N"), suit-toned card tokens, and a persisted `tabletop.logStylized` toggle (default ON; OFF renders the original prose verbatim). Semantic classification lives in `apps/web/logModel.ts` — an ordered regex→kind table over `GameView.history` strings (the structured `events` stream covers only a subset of lines, so prose classification is the low-risk path; wire format unchanged). Tests: `tests/gameLog.test.ts` + `e2e/log.spec.ts`. Gates: lint, typecheck, 199/199 Node tests, build, 42/42 e2e (both browsers). Recorded in `STATUS.md`. No commit, push, or deployment.
+The HybriX board is now a viewport-locked shell: `.app-wide` is exactly `100dvh` at ≥861px, `main` is the sole page-level scroller, and `.room` is a bounded flex column (`height:100%`, `overflow-y:auto`) — its max-content contribution can no longer grow the document after state updates. Density lives in `--hx-*` tokens (`clamp()`/`dvh`) at `:root`; COMPACT (`max-height:720px`) hides helper copy, DENSE (`max-height:580px`) re-floors tokens and captions. `.fc-layout` runs `grid-template-rows: auto minmax(0,1fr)`; battlefield rows are `container-type: size` flex tracks whose cards size off `100cqh`; status flags overlay cards via `.fc-card-wrap`/`.fc-flags` (no row-height cost). `.hx-stack` and `.fc-panel` are the rail flex anchors/scrollers. No global transform, no JS resize listeners.
+
+New `e2e/responsive.spec.ts` asserts document scroll ≤ client+2px and bounding boxes for status, left rail, Pending Plays, surface, piles, hand, right rail, opponent hand and Legal Actions at 1024×576 → 2560×1440 — 8/8 green on both engines. `e2e/server.ts` `watchErrors` now also filters Firefox's "can't establish a connection to the server at ws://…" socket-interruption wording (was Chromium-only — a latent harness flake during `backend.restart()`, not an app error).
+
+Gates: lint, typecheck, 199/199 Node tests, build, full e2e suite (58 Chromium+Firefox runs; see `STATUS.md` for the recorded result). Verified visually: Full-profile room and mid-game First Contact at 576/768/1080/1440 — board complete, no page scroll, occupied rows + flag overlays correct. No commit, push, or deployment.
+
+Pitfalls for future layout work: inside `.app-wide .room` every grid/flex child needs `min-height: 0`; `.room` must keep `height:100%` (not `min-height`) or state updates re-break the viewport lock; row cards derive from `100cqh` — keep `.fc-row` a size container and never let flags/labels add vertical flow.
+
+### Ranked next steps
+
+1. Implement the Reveals gap (`projectGame` `revealedHand`; expire `revealed` at Start with handle rotation).
+2. Continue expanding Full coverage per `docs/INTRILEX_FULL_AUDIT.md` (Voltage, BJ recycle, Sudden Death endgame).
+3. Obtain rules-owner rulings for source-map D-1 and D-3.
+4. Configure/deploy the separate multiplayer server only when authorized; keep the Neocities server origin blank.
+
+---
+
+# Previous handoff: Merged single header + HybriX board
+
+Updated September 29, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+The app nav and room/lesson bars are merged into ONE `.topbar` (~56px desktop): `common.tsx` `HeaderSlot`/`HeaderContext` portal, `App.tsx` owns the only header, `Online.tsx`/`Practice.tsx`/`Learn.tsx` render context into it. In-table the global service dot is suppressed (`.save-state` covers connection state); ≤520px hides only `.you-are`. `GameBoard.tsx` is the HybriX three-column board: left rail (P2/P1 summaries, Swap Bar, Pending Plays/Stack), center (status strip, four rows + Line of Scrimmage, landscape DP/GY/Exile trays, scalable hand tray), right rail (Opponent Hand, Legal Actions, Game Log tabs). Mini-Turns read-only `n / 3`. All engine/projection wiring and e2e selectors preserved.
+
+Key pitfalls solved: `.topbar` `backdrop-filter` traps `position:fixed` descendants — the chat dock portals to `document.body`; `flex:1` zero-basis collapsed `.header-context` at 390px; the hand tray needed `minmax(0,1fr)` grid to shrink under a scrollable strip; nested `.fc-actions` scroll broke Playwright hit-testing — keep `.fc-panel` the single scroller.
+
+`e2e/social.spec.ts` rate-limit step is now deterministic: six `chat-send` fillers fire in one `evaluate` over the host's real room socket (host also gets `socialTestSockets` init script) — the 10s window fills regardless of browser speed; assertions unchanged.
+
+Gates: lint, typecheck, 199/199 Node tests, build, e2e 42/42 both browsers (one transient Firefox `removeBrowserContext` teardown flake passed on retry). 390px `scrollWidth`=390. Screenshots in `artifacts/shots/`. Recorded in `STATUS.md`. No commit, push, or deployment.
 
 ### Ranked next steps
 

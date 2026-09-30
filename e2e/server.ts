@@ -36,6 +36,6 @@ export function watchErrors(page: Page) {
   const errors: string[] = [];
   // Reloads and deliberate backend restarts legitimately interrupt sockets; anything else is an app error.
   page.on('pageerror', e => { if (!/connection to ws:\/\/.* was interrupted/.test(e.message)) errors.push(e.message); });
-  page.on('console', m => { if (m.type() === 'error' && !/WebSocket|ERR_CONNECTION|Failed to load resource|net::|connection to ws:\/\/.* was interrupted/.test(m.text())) errors.push(m.text()); });
+  page.on('console', m => { if (m.type() === 'error' && !/WebSocket|ERR_CONNECTION|Failed to load resource|net::|connection to ws:\/\/.* was interrupted|establish a connection to the server at ws:/.test(m.text())) errors.push(m.text()); });
   return errors;
 }

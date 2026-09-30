@@ -124,11 +124,12 @@ test('suggested move uses current exact legal action over HTTP; pending and disc
 test('scroll position, unread watermark and same-epoch reconnect survive live chat; rejected draft retries explicitly', async ({ browser }) => {
   const backend = new Backend(); await backend.start(); const clients = await pages(browser, 2); const [host, guest] = clients.pages;
   try {
-    await guest!.addInitScript(() => {
+    const trackSockets = () => {
       const connections: WebSocket[] = []; const Original = window.WebSocket;
       window.WebSocket = class extends Original { constructor(url: string | URL, protocols?: string | string[]) { super(url, protocols); connections.push(this); } };
       Object.defineProperty(window, 'socialTestSockets', { value: connections });
-    });
+    };
+    await host!.addInitScript(trackSockets); await guest!.addInitScript(trackSockets);
     const room = await create(host!, backend); await join(guest!, room.invite, 'Bo'); await openChat(host!); await openChat(guest!);
     for (let i = 0; i < 4; i++) await send(host!, `Long entry ${i}\n${'A line to create real scroll overflow.\n'.repeat(15)}`);
     await expect(guest!.locator('.chat-entry')).toHaveCount(4);
@@ -141,9 +142,16 @@ test('scroll position, unread watermark and same-epoch reconnect survive live ch
     await expect.poll(() => guest!.evaluate(() => { const connections: unknown = Reflect.get(window, 'socialTestSockets'); return Array.isArray(connections) ? connections.length : 0; })).toBeGreaterThan(connectionCount);
     await expect(guest!.locator('.save-state')).toHaveText(/Saved/, { timeout: 15_000 }); await expect(trigger(guest!)).toHaveText(/1 unread/); await openChat(guest!); await expect(guest!.locator('.chat-entry')).toHaveCount(6);
     // The server allows 6 accepted sends per 10s per participant. Let the earlier sends' window
-    // lapse, then fill a fresh window so the next send is deterministically rejected in either browser.
+    // lapse, then fill a fresh window directly on the host's room socket: six wire-level sends
+    // land inside one window no matter how slowly the browser clicks through serialized UI sends.
     await host!.waitForTimeout(10_100);
-    for (let i = 0; i < 6; i++) await send(host!, `Rate window filler ${i}`);
+    await host!.evaluate(() => {
+      const connections: unknown = Reflect.get(window, 'socialTestSockets');
+      if (!Array.isArray(connections)) throw new Error('socket tracking missing');
+      const socket = connections.find((s): s is WebSocket => s instanceof WebSocket && s.readyState === WebSocket.OPEN);
+      if (!socket) throw new Error('no open room socket');
+      for (let i = 0; i < 6; i++) socket.send(JSON.stringify({ type: 'chat-send', requestId: crypto.randomUUID(), parts: [{ type: 'text', text: `Rate window filler ${i}` }] }));
+    });
     await expect(guest!.locator('.chat-entry')).toHaveCount(12);
     await host!.getByLabel('Message the room').fill('Rate-limited draft preserved'); await host!.getByRole('button', { name: 'Send message', exact: true }).click();
     await expect(host!.getByText('Message failed.', { exact: true })).toBeVisible(); await expect(host!.getByLabel('Message the room')).toHaveValue('Rate-limited draft preserved'); await expect(host!.locator('.save-state')).toHaveText(/Saved/);

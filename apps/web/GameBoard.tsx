@@ -369,7 +369,6 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
           </div>
           {suggested.length > 0 && <section className="fc-suggestions" aria-label="Suggested Moves">
             <h3>Suggested Moves</h3>
-            <p className="muted small">{view.legalActions.length <= 2 ? 'These are the available legal choices for this decision.' : 'Advice from your visible cards and public board. Every legal choice remains below.'}</p>
             <ol>{suggested.map(move => <li key={move.key}>
               <button type="button" className="action-btn suggested-action" disabled={busy} onClick={() => execute(move.key)} aria-label={`Suggested move ${move.rank}: ${move.label}`}><span>{move.rank}. {suitSpans(move.label)}</span><small>{move.explanation}</small></button>
             </li>)}</ol>
@@ -378,7 +377,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
           {selected && <div className="chip-row"><button type="button" className="chip" onClick={() => setSelected(null)}>Filtering by {suitSpans(cardName(visibleCards.find(c => c.id === selected) ?? {}))} ×</button>
             {handIds.has(selected) && <button type="button" className="chip" onClick={showWhy}>Why can / can’t I?</button>}
             <button type="button" className="chip" onClick={() => { const c = visibleCards.find(x => x.id === selected); if (c) { setInspect(c); onInspectCard?.(); } }}>Inspect</button></div>}
-          {hints && !selected && myDecision && <p className="muted small">Select a card to focus its choices. Legal choices only are listed; the engine checks them again.</p>}
+
           {full && hints && view.phase === 'start' && <p className="muted small">Start Phase: resolve any choices, optionally use a face-down Swap, then enter the Action Phase. The listed choices come from the rules engine.</p>}
           {full && myDecision && <label className="small">Find a legal action<input type="search" value={actionSearch} onChange={e => setActionSearch(e.target.value)} placeholder="Card, mode or target…" /></label>}
           <PossibleMoves entries={entries} look={look} busy={busy} hints={hints} suggestedKeys={suggestedKeys}

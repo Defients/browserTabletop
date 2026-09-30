@@ -553,15 +553,18 @@ span.card { cursor: default; }
 .hx-d-overlap .hx-hand-slot:hover .card, .hx-d-overlap .hx-hand-slot:focus-within .card { transform: translateY(-6px); }
 .hx-d-scroll .hx-hand-cards { gap: .35rem; }
 
-/* Opponent hand (top of right rail) */
+/* Opponent hand (top of right rail) — violet edge marks it as theirs, like the seat card. */
+.hx-ophand { border-left: 3px solid rgba(143, 123, 255, .55); }
 .hx-ophand-body { display: flex; align-items: flex-end; gap: .6rem; }
 .hx-ophand-body .hx-fan { flex: 1; min-width: 0; }
 .hx-ophand-count { flex: none; font-size: clamp(1.15rem, 2.9dvh, 1.7rem); font-weight: 800; line-height: 1; color: var(--ct-violet); font-variant-numeric: tabular-nums; text-shadow: 0 0 14px rgba(143, 123, 255, .55); }
 
-/* Right rail action panel */
+/* Right rail action panel — a banded header and inset suggestion card give the
+   rail a composed instrument-panel structure instead of loose stacked text. */
 .fc-panel { position: sticky; top: 4rem; display: flex; flex-direction: column; gap: .5rem; max-height: calc(100dvh - 5rem); overflow: auto; backdrop-filter: blur(10px); }
-.fc-panel-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
-.fc-panel-head h2 { margin: 0; font-size: 1rem; letter-spacing: .03em; }
+.fc-panel-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: calc(var(--hx-panel-pad) * -.86) calc(var(--hx-panel-pad) * -1) .1rem; padding: .45rem var(--hx-panel-pad) .5rem; border-bottom: 1px solid var(--ct-border); border-radius: 12px 12px 0 0; background: linear-gradient(180deg, rgba(34, 42, 84, .55), rgba(20, 26, 56, .2)); }
+.fc-panel-head h2 { margin: 0; font-size: 1rem; letter-spacing: .03em; white-space: nowrap; }
+.fc-panel-head .link-btn { white-space: nowrap; }
 .chip-row { display: flex; flex-wrap: wrap; gap: .35rem; }
 .chip { font-size: .78rem; min-height: 1.8rem; padding: .1rem .6rem; border-radius: 999px; }
 .fc-actions { display: flex; flex-direction: column; gap: .28rem; counter-reset: hxact; }
@@ -618,7 +621,7 @@ span.card { cursor: default; }
 .full-card-states { display: block; max-width: 92px; font-size: .62rem; color: var(--ct-violet); text-align: center; }
 /* ── Game log: "What happened?" — semantic event feed ── */
 .fc-history { border-top: 1px solid var(--ct-border); padding-top: .55rem; }
-.fc-history > summary { cursor: pointer; font-weight: 700; }
+.fc-history > summary { cursor: pointer; font-weight: 800; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ct-text-secondary); }
 .glog { --log-p0: var(--ct-cyan); --log-p1: var(--ct-orange); --log-card-red: #ff93a8; --log-card-black: #dfe6ff; --log-joker-black: #c9b8ff; }
 .glog-count { font-size: .68rem; font-weight: 700; color: var(--ct-text-muted); background: rgba(140, 160, 255, .12); border: 1px solid rgba(140, 160, 255, .2); border-radius: 999px; padding: .05rem .45rem; margin-left: .45rem; }
 .glog-toolbar { display: flex; align-items: center; gap: .5rem; margin: .4rem 0 .35rem; flex-wrap: wrap; }
@@ -828,10 +831,14 @@ span.card { cursor: default; }
 .notice-reconnected { border-left-color: var(--ct-teal); }
 .notice-disconnected { border-left-color: var(--ct-orange); }
 .notice-system { border-left-color: var(--ct-silver); }
-.fc-suggestions { border-bottom: 1px solid var(--ct-border); padding: .65rem .8rem; background: rgba(143, 123, 255, .05); }
-.fc-suggestions h3, .fc-possible-heading { font-size: .95rem; margin: 0 0 .45rem; }
+.fc-suggestions { border: 1px solid rgba(143, 123, 255, .24); border-radius: 10px; padding: .55rem .7rem .6rem; background: linear-gradient(165deg, rgba(143, 123, 255, .1), rgba(143, 123, 255, .03)); }
+.fc-suggestions h3, .fc-possible-heading { margin: 0 0 .45rem; font-size: .72rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; color: var(--ct-text-muted); }
+.fc-suggestions h3 { color: #c9b8ff; }
+.fc-possible-heading { display: flex; align-items: center; gap: .55rem; }
+.fc-possible-heading::after { content: ""; flex: 1; height: 1px; background: var(--ct-border); }
 .suggested-action { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .5rem; }
 .suggested-action { border-color: var(--ct-violet); text-align: left; }
+.suggested-action:hover:not(:disabled) { border-color: #c0b2ff; box-shadow: 0 0 18px rgba(143, 123, 255, .35), inset 0 0 14px rgba(143, 123, 255, .08); }
 .suggested-action small { margin: 0; color: var(--ct-text-muted); font-size: .8rem; font-weight: 400; line-height: 1.4; }
 @media (max-width: 860px) {
   #room-chat .chat-messages { max-height: 35dvh; }
@@ -913,7 +920,6 @@ span.card { cursor: default; }
     .app-wide .room .notice { padding: .35rem .7rem; margin: .25rem 0 .4rem; }
     .app-wide .room .fc-status .eyebrow,
     .app-wide .room .hx-swap .hx-sec-head > span,
-    .app-wide .room .fc-suggestions > p,
     .app-wide .room .fc-panel > p.muted.small,
     .app-wide .room .hx-stack-note,
     .app-wide .room .hand-head > span { display: none; }

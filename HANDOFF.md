@@ -1,4 +1,21 @@
-# Latest handoff: Point Row landscape card tiles
+# Latest handoff: Right rail polish
+
+Updated September 30, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+Removed the two filler helper paragraphs from the Legal Actions panel (Suggested Moves caption + "Select a card to focus" hint) and restyled `.hx-right`: `.fc-panel-head` is now an edge-to-edge title band (negative margins sized off `--hx-panel-pad`) with a hairline divider and nowrap labels; Suggested Moves is a bordered violet inset card; "Possible Moves" and the Game Log summary share uppercase-eyebrow styling; Opponent Hand got the opponent-violet left edge; suggested-action hover glows violet. Dead `.fc-suggestions > p` COMPACT selector removed.
+
+Gates: lint, typecheck, build, 212/212 Node tests, responsive e2e 16/16. Visual: `artifacts/shots/rail-*.png`. Recorded in `STATUS.md`. No commit, push, or deployment.
+
+### Ranked next steps
+
+1. Implement the Reveals gap (`projectGame` `revealedHand`; expire `revealed` at Start with handle rotation).
+2. Continue expanding Full coverage per `docs/INTRILEX_FULL_AUDIT.md` (Voltage, BJ recycle, Sudden Death endgame).
+3. Obtain rules-owner rulings for source-map D-1 and D-3.
+4. Configure/deploy the separate multiplayer server only when authorized; keep the Neocities server origin blank.
+
+---
+
+# Previous handoff: Point Row landscape card tiles
 
 Updated September 30, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
 

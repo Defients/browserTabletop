@@ -1,5 +1,22 @@
 # Status
 
+## Right rail declutter + instrument-panel polish — September 30, 2026
+
+Removed the two filler helper paragraphs from the Legal Actions panel (the Suggested Moves caption "Advice from your visible cards…" and the "Select a card to focus its choices…" hint) and tidied the right rail. The panel head is now an edge-to-edge title band with a hairline divider and a gradient (`fc-panel-head` uses negative margins matching `--hx-panel-pad`); its `h2`/`Fewer hints` link are `white-space: nowrap` so the band stays one line at narrow widths. Suggested Moves is a bordered violet inset card with an eyebrow label; "Possible Moves" and the Game Log summary share the same uppercase-eyebrow treatment, with a trailing rule on the Possible Moves heading. The Opponent Hand panel carries the violet left edge used by the opponent seat card, and suggested-action hover now glows violet instead of the generic cyan. The dead `.fc-suggestions > p` COMPACT hide-rule was removed (`.fc-panel > p.muted.small` stays — it still covers the Full Start Phase hint).
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| `npm run build` | PASS |
+| Node tests | PASS — 212/212 (unchanged; no behavioral code touched) |
+| Responsive spec (Chromium + Firefox) | PASS — 16/16 at 1024×576 → 2560×1440 |
+| Visual inspection | Right rail at 1440×900, 1024×576 and 390×844 (`artifacts/shots/rail-*.png`) — one-line header band, suggestion card, eyebrow labels |
+
+No commit, push, or public deployment occurred.
+
 ## Point Row card tiles — landscape rank+suit renderer — September 30, 2026
 
 Point Row cards no longer render as miniature portrait playing cards inside oversized slots. `CardFace` gained a `variant="point-row"` (applied only by `boardRow` for `zone === 'pr'` in `GameBoard.tsx`; Enduring Row, hand, stack, Swap Bar, trays and TableBoard are untouched) that drops the duplicate corner indices and renders a single centered rank+suit composition on the normal light card surface — red suits keep `.card-red`, jokers render `RJ★`/`BJ★`, backs still show `card-back-mark`, and all state classes/ARIA labels are unchanged (selection, tap, highlight, click/double-click behavior preserved).

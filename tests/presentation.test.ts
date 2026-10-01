@@ -11,7 +11,7 @@ import {
 /** Minimal projected view for pure-adapter tests (all fields required by GameView). */
 const bare = (over: Partial<GameView> = {}): GameView => ({
   profile: 'intrilex-full', you: 0,
-  players: [0, 1].map(() => ({ handCount: 0, pr: [], er: [], goal: 21, score: 0, guard: false, disrupted: [], quick2Used: false })),
+  players: [0, 1].map(() => ({ handCount: 0, pr: [], er: [], attachments: [], goal: 21, score: 0, guard: false, disrupted: [], quick2Used: false })),
   hand: [], deckCount: 0, graveyard: [], activePlayer: 0, phase: 'action', miniTurns: 1, turn: 3,
   pending: [], priority: 0, choice: null, boardLock: null, exhausted: null, winner: null,
   legalActions: [], history: [], ...over,

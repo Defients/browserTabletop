@@ -1,5 +1,5 @@
 import { applyTable, createTable, parseTableCommand, projectTable, rebaseSafe, undoable, TableError, type TableState } from '../../packages/tabletop/index.js';
-import { applyGame, createGame, projectGame, GameError, type GameState } from '../../packages/intrilex/index.js';
+import { applyGame, createGame, projectGame, GameError, normalizeGameState, type GameState } from '../../packages/intrilex/index.js';
 import type { TableTemplate } from '../../packages/templates/index.js';
 import type { RoomCommand, RoomView } from '../../packages/protocol/index.js';
 
@@ -46,6 +46,8 @@ export function validateRoomVersion(room: Room): void {
     const version = room.template.profile === 'intrilex-full' ? 3 : 2;
     requireThat(room.template.seats === 2 && !room.table && room.game && room.engineVersion === version &&
       room.game.version === version && room.game.profile === room.template.profile, 409, 'ROOM_VERSION_UNSUPPORTED');
+    // Pre-registry payloads carried attached Jacks inside `er`; migrate them into `attachments`.
+    if (room.game) normalizeGameState(room.game);
   } else {
     requireThat(room.engineVersion === 2 && room.table && !room.game, 409, 'ROOM_VERSION_UNSUPPORTED');
   }

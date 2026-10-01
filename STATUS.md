@@ -1,5 +1,23 @@
 # Status
 
+## Jack attachment model correction — October 1, 2026
+
+Normal Jacks played for effect were stored in `players[p].er` with a `hostId` back-reference, so the authoritative state placed them in the Enduring Row and the board rendered a standalone ER card next to an intact enemy PR host. Replaced with a canonical attachment registry: `GameState.attachments` maps jackId → `{ hostId, controller, mode }`, `GameCard.tugBy` marks the host, and `'attached'` is now a real `CardLocation` row — attached Jacks occupy no zone. `score()`, capacity checks, targeting predicates, severing (`checkAttachments`), and `projectGame` all derive from the registry; `GameView.attachments` carries the public relation to the client. The ER special case was repaired at the same time: `J♠ → ER` (full profile `attach-er`) now moves the enemy Anchor into the Jacker's ER with the Jack attached — previously the Jack landed in the caster's ER while the host stayed in the opponent's and `checkAttachments` scrapped it immediately. `normalizeGameState` migrates legacy `hostId`-in-ER saves on every load path (applyGame input, room `validateRoomVersion`, Practice localStorage, `resumeLesson`). `GameBoard` renders the mini-card inside the host tile (`~30%` width, tucked corner) with a `Jacked +1` tag on PR hosts; both members cross-highlight on hover and the inspect panel shows base card / Jack / original owner / controller. ER no longer renders attached Jacks as slot occupants.
+
+### Gates
+
+| Check | Result |
+|---|---|
+| Lint | PASS |
+| Typecheck | PASS |
+| `npm run build` | PASS |
+| Node tests | PASS — 220/220 (8 new `tests/intrilex.attachments.test.ts` cases A–H: PR attach state, slot/ER neutrality, `J♠` ER distinctness, sever-on-host-removal, save/reload normalization, replay determinism, simulation copy) |
+| Playwright e2e | PASS — `learn.spec.ts` 2/2 Chromium (Jack-attach lesson completes through real interactions) |
+| Bot smoke | PASS — `scripts/smoke-games.ts` 200 games, wins [92,108,0], maxTurns 52, maxMoves 172 |
+| Visual inspection | Jacked `9♠` in P1 PR with tucked mini + `Jacked +1` tag, empty ER, Secured 13 = 3 + (9+1), at 1440×900 and 390×844 (`artifacts/shots/jack-attach-*.png`) |
+
+No commit, push, or public deployment occurred.
+
 ## Right rail declutter + instrument-panel polish — September 30, 2026
 
 Removed the two filler helper paragraphs from the Legal Actions panel (the Suggested Moves caption "Advice from your visible cards…" and the "Select a card to focus its choices…" hint) and tidied the right rail. The panel head is now an edge-to-edge title band with a hairline divider and a gradient (`fc-panel-head` uses negative margins matching `--hx-panel-pad`); its `h2`/`Fewer hints` link are `white-space: nowrap` so the band stays one line at narrow widths. Suggested Moves is a bordered violet inset card with an eyebrow label; "Possible Moves" and the Game Log summary share the same uppercase-eyebrow treatment, with a trailing rule on the Possible Moves heading. The Opponent Hand panel carries the violet left edge used by the opponent seat card, and suggested-action hover now glows violet instead of the generic cyan. The dead `.fc-suggestions > p` COMPACT hide-rule was removed (`.fc-panel > p.muted.small` stays — it still covers the Full Start Phase hint).

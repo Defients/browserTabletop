@@ -64,7 +64,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
   const them = 1 - me;
   const label = (p: number) => names?.[p] ?? (p === view.you ? 'You' : `Player ${p + 1}`);
   const handIds = new Set(view.hand.map(c => c.id));
-  const visibleCards = [...view.hand, ...view.players.flatMap(p => [...p.pr, ...p.er, ...(p.revealedHand ?? [])]), ...(view.choice?.cards ?? []), ...(view.swapBar ?? []).flatMap(s => s.card ? [s.card] : [])];
+  const visibleCards = [...view.hand, ...view.players.flatMap(p => [...p.pr, ...p.er, ...p.attachments, ...(p.revealedHand ?? [])]), ...(view.choice?.cards ?? []), ...(view.swapBar ?? []).flatMap(s => s.card ? [s.card] : [])];
   const suggested = useMemo(() => suggestions ? rankSuggestedMoves(view) : [], [suggestions, view]);
   const suggestedKeys = useMemo(() => new Set(suggested.map(m => m.key)), [suggested]);
   const latest = useRef(view);
@@ -145,6 +145,8 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
     const mine = p === view.you;
     const slotCount = Math.max(4, cards.length);
     const title = zone === 'pr' ? 'Point Row' : 'Enduring Row';
+    // Jack Attachments ride inside their host's slot — they never consume a slot of their own (§12).
+    const atts = view.players[p]!.attachments;
     return (
       <div className={`fc-row hx-row fc-${zone} ${highlight === zone && mine ? 'is-lesson-target' : ''}`} {...(mine ? zoneProps(zone) : { 'data-zone': `${zone}-opp` })}>
         <span className="fc-row-name hx-row-name"><b>P{p + 1}</b><span>{title} (<abbr title={title}>{zone.toUpperCase()}</abbr>)</span></span>
@@ -153,17 +155,26 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
           {Array.from({ length: slotCount }, (_, i) => {
             const c = cards[i];
             if (!c) return <span key={`empty-${i}`} className="hx-slot" aria-hidden="true" />;
+            const jacks = atts.filter(j => j.hostId === c.id);
+            const targetable = (x: GameCard) => focusTargets.has(x.id) || view.legalActions.some(a => a.targetId === x.id);
             return (
-              <div key={c.id} className={`fc-slot ${c.hostId ? 'is-attached' : ''}`}>
+              <div key={c.id} className={`fc-slot ${jacks.length ? 'has-attachment' : ''}`}>
                 <span className="fc-card-wrap">
-                  <CardFace rank={c.rank} suit={c.suit} tapped={c.tapped} attached={!!c.hostId} variant={zone === 'pr' ? 'point-row' : undefined} selected={selected === c.id} highlight={focusTargets.has(c.id) || view.legalActions.some(a => a.targetId === c.id)}
-                    extraLabel={c.hostId ? `Jack attached to ${cardName(cards.find(x => x.id === c.hostId) ?? view.players[p]!.pr.find(x => x.id === c.hostId) ?? { rank: undefined })}` : undefined}
+                  <CardFace rank={c.rank} suit={c.suit} tapped={c.tapped} variant={zone === 'pr' ? 'point-row' : undefined} selected={selected === c.id} highlight={targetable(c) || (!!selected && jacks.some(j => j.id === selected))}
+                    extraLabel={jacks.length ? `Jacked by ${jacks.map(cardName).join(', ')}` : undefined}
                     onClick={() => pick(c)} onDoubleClick={() => { setInspect(c); onInspectCard?.(); }} />
+                  {jacks.map(j => (
+                    <span key={j.id} className="fc-attach" title={`${cardName(j)} is attached to ${cardName(c)} — an Attachment, not an Enduring Row card (§12).`}>
+                      <CardFace size="sm" rank={j.rank} suit={j.suit} tapped={j.tapped} attached
+                        selected={selected === j.id} highlight={targetable(j) || selected === c.id}
+                        extraLabel={`Attached to ${cardName(c)}`}
+                        onClick={() => pick(j)} onDoubleClick={() => { setInspect(j); onInspectCard?.(); }} />
+                    </span>
+                  ))}
                   <span className="fc-flags">
-                    {c.hostId && <span className="fc-tag">Jack</span>}
-                    {zone === 'er' && !c.hostId && <span className="fc-tag" title={`Anchor value ${anchorValue(c)}`}>⚓ {anchorValue(c)}</span>}
+                    {zone === 'er' && <span className="fc-tag" title={`Anchor value ${anchorValue(c)}`}>⚓ {anchorValue(c)}</span>}
                     {full && (c.aegis !== undefined || c.exileBound || c.wildBound || c.playedForEffect) && <span className="full-card-states">{[c.aegis !== undefined && 'Aegis', (c.exileBound || c.wildBound) && 'Exile-bound', c.playedForEffect && 'Played for Effect'].filter(Boolean).join(' · ')}</span>}
-                    {zone === 'pr' && view.players[p]!.er.some(j => j.hostId === c.id) && <span className="fc-tag fc-tag-jacked">Jacked +1</span>}
+                    {!!jacks.length && <span className="fc-tag fc-tag-jacked">{zone === 'pr' ? 'Jacked +1' : 'Jacked'}</span>}
                     {c.tapped && <span className="fc-tag fc-tag-tapped" title={tapTitle(c, p)}>{tapTag(c, p)}</span>}
                   </span>
                 </span>
@@ -215,6 +226,7 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
   };
 
   const showWhy = () => { if (selected && handIds.has(selected)) setWhy(explainCard(view, selected)); };
+  const inspectJack = inspect ? view.players.flatMap(pl => pl.attachments).find(j => j.hostId === inspect.id) : undefined;
   const topGy = view.graveyard.at(-1);
   const topExile = view.exile?.at(-1);
   const mtTotal = full ? Math.max(3, view.miniTurns) : Math.max(1, view.miniTurns);
@@ -389,6 +401,8 @@ export default function GameBoard({ view, onAction, busy = false, names, hints =
 
       {inspect && <Modal title={cardName(inspect)} onClose={() => setInspect(null)}>
         <div className="inspect-card"><CardFace size="lg" rank={inspect.rank} suit={inspect.suit} tapped={inspect.tapped} /></div>
+        {inspect.hostId && <p className="muted small">Attached to {cardName(visibleCards.find(x => x.id === inspect.hostId) ?? {})} — a Jack Attachment rides its host; it is not an Enduring Row card and severs if the host leaves its row (§12).</p>}
+        {inspectJack && <p className="muted small">Jacked by {cardName(inspectJack)} — this host counts for the Jack’s controller while the Attachment holds{view.players.some(pl => pl.pr.includes(inspect)) ? ' (+1 Point)' : ''}.</p>}
         {full ? <><p>Full rules · <a href="#/rules" target="_blank" rel="noopener">Rules reference</a></p><ul className="rank-notes">{view.legalActions.filter(a => a.cardId === inspect.id || a.cardIds?.includes(inspect.id)).map((a, i) => <li key={i}>{explainAction(a)}</li>)}</ul><p className="muted small">Available uses depend on timing, targets, protection and the selected mode. The action panel lists the currently authorized declarations.</p></> : <RankNotes rank={inspect.rank} />}
       </Modal>}
       {gy && <Modal title={`Graveyard · ${view.graveyard.length} cards (newest last)`} onClose={() => setGy(false)} wide><div className="browse-grid">{view.graveyard.map(c => <CardFace key={c.id} size="sm" rank={c.rank} suit={c.suit} />)}</div></Modal>}

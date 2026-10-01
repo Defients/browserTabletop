@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { applyTable, artIndex, createTable, projectTable, secureRandom, TableError, type TableCommand, type TableState } from '../../packages/tabletop/index.js';
-import { applyGame, chooseBotAction, createGame, projectGame, assertGameIntegrity, type GameAction, type GameState } from '../../packages/intrilex/index.js';
+import { applyGame, chooseBotAction, createGame, projectGame, assertGameIntegrity, normalizeGameState, type GameAction, type GameState } from '../../packages/intrilex/index.js';
 import { HeaderContext, Modal, loadLocal, saveLocal } from './common.js';
 import { allTemplates, findTemplate } from './Library.js';
 import TableBoard from './TableBoard.js';
@@ -51,7 +51,7 @@ export function LocalTable({ templateId }: { templateId?: string }) {
 
 const FC_KEY = 'tabletop.local.firstContact';
 export function LocalFirstContact() {
-  const [game, setGame] = useState<GameState>(() => { const g = loadLocal<GameState | null>(FC_KEY, null); try { if (g?.version === 2) { assertGameIntegrity(g); return g; } } catch { /* start fresh */ } return createGame(); });
+  const [game, setGame] = useState<GameState>(() => { const g = loadLocal<GameState | null>(FC_KEY, null); try { if (g?.version === 2) { normalizeGameState(g); assertGameIntegrity(g); return g; } } catch { /* start fresh */ } return createGame(); });
   const [hints, setHints] = useState(() => loadLocal('tabletop.hints', true));
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState(false);

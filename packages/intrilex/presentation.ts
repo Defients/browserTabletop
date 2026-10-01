@@ -61,7 +61,7 @@ export function actionLookups(view: GameView): ActionLookups {
   const cards = new Map<string, GameCard>();
   const track = (c: GameCard | undefined) => { if (c) cards.set(c.id, c); };
   for (const c of view.hand) track(c);
-  for (const p of view.players) for (const c of [...p.pr, ...p.er, ...(p.revealedHand ?? [])]) track(c);
+  for (const p of view.players) for (const c of [...p.pr, ...p.er, ...p.attachments, ...(p.revealedHand ?? [])]) track(c);
   for (const c of view.graveyard) track(c);
   for (const c of view.exile ?? []) track(c);
   for (const s of view.swapBar ?? []) track(s.card);

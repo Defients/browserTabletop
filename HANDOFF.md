@@ -1,4 +1,22 @@
-# Latest handoff: Right rail polish
+# Latest handoff: Jack attachment model correction
+
+Updated October 1, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
+
+Normal Jacks attaching to PR were stored in `players[p].er` with a `hostId` back-reference, so the board rendered them as free-standing Enduring Row permanents (host in PR, Jack in ER). Replaced with a canonical **attachment registry**: `GameState.attachments` maps jackId → `{ hostId, controller, mode }`, `GameCard.tugBy` marks the host, and `attached` became a real row on `CardLocation` — attached Jacks live in no zone. Normal J → PR keeps the host in PR under the Jacker's control (+1 while attached, `Jacked +1` tag, mini-card tucked at the host tile corner); the ER special case was fixed at the same time — `J♠ → ER` now moves the enemy host Anchor into the Jacker's ER with the Jack attached (previously the Jack was scrapped instantly by `checkAttachments`). Scoring, capacity, targeting, severing, and projection all derive from the registry; `normalizeGameState` migrates legacy `hostId`-in-ER saves on every load path (applyGame, room validation, Practice localStorage, lesson resume). UI is driven by `GameView.attachments`; both members highlight on hover and inspection shows base/Jack/original owner/controller lines.
+
+Gates: lint, typecheck, build, 220/220 Node tests (8 new `tests/intrilex.attachments.test.ts` cases covering A–H), e2e `learn.spec.ts` 2/2 Chromium, 200-game bot smoke (`wins [92,108,0]`, maxTurns 52). Visual: `artifacts/shots/jack-attach-*.png` via `scripts/jack-shot.ts`. Docs: source map §12/§26 row updated, `capabilities.json` normal-Jack evidence re-pointed. Recorded in `STATUS.md`. No commit, push, or deployment.
+
+### Ranked next steps
+
+1. Implement the Reveals gap (`projectGame` `revealedHand`; expire `revealed` at Start with handle rotation).
+2. Continue expanding Full coverage per `docs/INTRILEX_FULL_AUDIT.md` (Voltage, BJ recycle, Sudden Death endgame).
+3. Obtain rules-owner rulings for source-map D-1 and D-3.
+4. Wire remaining attachment-aware UI affordances (mini-card click-through inspect is live; tap indicators on attached Jacks already show via `is-tapped`).
+5. Configure/deploy the separate multiplayer server only when authorized; keep the Neocities server origin blank.
+
+---
+
+# Previous handoff: Right rail polish
 
 Updated September 30, 2026 (America/New_York). This section supersedes the earlier session snapshot below.
 

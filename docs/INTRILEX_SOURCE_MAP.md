@@ -25,7 +25,7 @@ Part VII (§27 / Canonical §15) is a profile over the larger book. Implemented 
 | §4.4 Free plays; §26 Timing Keywords | Quick = own turn; Instant = any response window | `quickModes`, `instantModes` |
 | §5 Declare/fizzle; §6 Stack; §7 Counters | declaration legality via enumeration; LIFO; revalidation → fizzle; counters don't refund | `settle`, `resolve`, `fizzle` |
 | §8 Secured PR; §9 Tapping | tapped cards score 0; Jack +1 | `score` |
-| §12 Attachments | sever/Scrap Jack; host returns to owner | `checkAttachments`, `restoreHost` |
+| §12 Attachments | a Jack is an attachment-registry entry keyed by `hostId`, never an ER occupant; sever/Scrap Jack; host returns to owner. J♠ (`attach-er`) moves the ER Anchor under the Jacker's control — it stays in the Jacker's ER as the host. | `attachments`, `checkAttachments`, `restoreHost`, `attach-er` |
 | §13 Guard | untapped Queen Anchor protects *other* OTT cards from enemy single-target Effects | `guarded`, `effectTargetable` |
 | §17 Vulnerable | single-target legality = no rank/state immunity + Guard (Aegis absent) | `effectTargetable` |
 | §19 Scuttle; §16.4 | rank order A…K<RJ<BJ, suit ties ♣<♦<♥<♠, A/5/RJ/BJ immune, own cards illegal | `canScuttle`, `outranks` |

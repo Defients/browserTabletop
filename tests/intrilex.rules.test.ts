@@ -154,7 +154,8 @@ test('4.clear §26 ⦗4⦘: clearing enemy Anchors leaves Attachments and all PR
   let s = fixture({ hands: [['4♠', '10♦'], NO], pr: [[], ['9♣']], er: [[], [{ card: 'J♥', host: '9♣' }, 'K♦', 'Q♥']] });
   s = effect(s, 0, '4♠', 'clear-er');
   s = passAll(s);
-  assert.deepEqual(s.players[1]!.er.map(c => c.rank), ['J']);
+  assert.deepEqual(s.players[1]!.er.map(c => c.rank), [], 'the Attachment never occupies an ER slot (§12)');
+  assert.deepEqual(s.players[1]!.attachments!.map(c => c.rank), ['J'], 'the Attachment survives with its host');
   assert.equal(zoneOf(s, '9♣'), 'pr-1');
 });
 

@@ -13,13 +13,13 @@ export function rankSuggestedMoves(view: GameView): SuggestedMove[] {
   const me = view.players[view.you], enemy = view.players[1 - view.you];
   if (!me || !enemy) return [];
   const known = new Map<string, GameCard>();
-  for (const c of [...view.hand, ...view.players.flatMap(p => [...p.pr, ...p.er, ...(p.revealedHand ?? [])]), ...view.graveyard, ...(view.exile ?? []),
+  for (const c of [...view.hand, ...view.players.flatMap(p => [...p.pr, ...p.er, ...p.attachments, ...(p.revealedHand ?? [])]), ...view.graveyard, ...(view.exile ?? []),
     ...(view.swapBar ?? []).flatMap(s => s.card ? [s.card] : []), ...view.pending.flatMap(p => [...(p.card ? [p.card] : []), ...(p.cards ?? [])]), ...(view.choice?.cards ?? [])]) known.set(c.id, c);
   const value = (id?: string) => { const c = id ? known.get(id) : undefined; return c ? pointValue(c) : 0; };
   const secured = new Map<string, number>();
   for (const p of view.players) {
     const jackBonuses = new Map<string, number>();
-    for (const j of p.er) if (j.rank === 'J' && j.hostId && !j.tapped) jackBonuses.set(j.hostId, 1);
+    for (const j of p.attachments) if (j.rank === 'J' && j.hostId && !j.tapped) jackBonuses.set(j.hostId, 1);
     for (const c of p.pr) secured.set(c.id, c.tapped ? 0 : pointValue(c) + (jackBonuses.get(c.id) ?? 0));
   }
   const enemyPr = new Set(enemy.pr.map(c => c.id));

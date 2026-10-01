@@ -51,17 +51,21 @@ export function fixture(spec: FixtureSpec): GameState {
   const active = spec.active ?? 0;
   const isFull = spec.profile === 'intrilex-full';
   const players = [0, 1].map(p => ({
-    hand: spec.hands[p]!.map(t => make(t)), pr: (spec.pr?.[p] ?? []).map(t => make(t, p)), er: [] as GameCard[],
+    hand: spec.hands[p]!.map(t => make(t)), pr: (spec.pr?.[p] ?? []).map(t => make(t, p)), er: [] as GameCard[], attachments: [] as GameCard[],
     goal: spec.goals?.[p] ?? (isFull ? 21 : GOAL), quick2Used: false, disrupted: [] as never[],
     ...(isFull ? { swapUsed: false, quickQUsed: false, courtUsed: false, tenUsed: false, ultraUsed: false, skips: 0, starts: 0 } : {}),
   }));
-  for (let p = 0; p < 2; p++) for (const e of spec.er?.[p] ?? []) {
-    if (typeof e === 'string') { players[p]!.er.push(make(e, p)); continue; }
-    const want = parseCard(e.host);
-    const host = players[p]!.pr.find(c => c.rank === want.rank && c.suit === want.suit);
-    if (!host) throw new Error(`Jack host ${e.host} must be listed in the same player's PR`);
-    host.owner = 1 - p;
-    players[p]!.er.push({ ...make(e.card, p), hostId: host.id });
+  for (let p = 0; p < 2; p++) {
+    // Anchors first so a `{card, host}` Jack spec can name a PR card or an ER Anchor alike.
+    for (const e of spec.er?.[p] ?? []) if (typeof e === 'string') players[p]!.er.push(make(e, p));
+    for (const e of spec.er?.[p] ?? []) {
+      if (typeof e === 'string') continue;
+      const want = parseCard(e.host);
+      const host = players[p]!.pr.find(c => c.rank === want.rank && c.suit === want.suit) ?? players[p]!.er.find(c => c.rank === want.rank && c.suit === want.suit);
+      if (!host) throw new Error(`Jack host ${e.host} must be listed in the same player's PR or ER`);
+      host.owner = 1 - p;
+      players[p]!.attachments.push({ ...make(e.card, p), hostId: host.id });
+    }
   }
   const graveyard = (spec.graveyard ?? []).map(t => make(t));
   const deckTop = (spec.deckTop ?? []).map(t => make(t));
@@ -84,6 +88,6 @@ export function fixture(spec: FixtureSpec): GameState {
 /** Find a card by notation anywhere in the state (tests and lessons). */
 export function findCard(s: GameState, text: string): GameCard | undefined {
   const { rank, suit } = parseCard(text);
-  const all = [...s.players.flatMap(p => [...p.hand, ...p.pr, ...p.er]), ...s.deck, ...s.graveyard, ...(s.exile ?? []), ...(s.swapBar ?? []).map(x => x.card), ...s.stack.flatMap(i => [...(i.card ? [i.card] : []), ...(i.cards ?? [])]), ...(s.choice?.held ? s.choice.cards : []), ...s.suspended.flatMap(x => [...(x.card ? [x.card] : []), ...(x.task?.held ? x.task.cards : [])])];
+  const all = [...s.players.flatMap(p => [...p.hand, ...p.pr, ...p.er, ...(p.attachments ?? [])]), ...s.deck, ...s.graveyard, ...(s.exile ?? []), ...(s.swapBar ?? []).map(x => x.card), ...s.stack.flatMap(i => [...(i.card ? [i.card] : []), ...(i.cards ?? [])]), ...(s.choice?.held ? s.choice.cards : []), ...s.suspended.flatMap(x => [...(x.card ? [x.card] : []), ...(x.task?.held ? x.task.cards : [])])];
   return all.find(c => c.rank === rank && c.suit === suit);
 }

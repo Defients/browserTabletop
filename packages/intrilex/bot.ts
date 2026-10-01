@@ -10,7 +10,7 @@ export function chooseBotAction(view: GameView): GameAction | null {
   if (!actions.length || view.you === null) return null;
   const me = view.you;
   const known = new Map<string, GameCard>();
-  for (const c of [...view.hand, ...view.graveyard, ...(view.choice?.cards ?? []), ...view.players.flatMap(p => [...p.pr, ...p.er])]) known.set(c.id, c);
+  for (const c of [...view.hand, ...view.graveyard, ...(view.choice?.cards ?? []), ...view.players.flatMap(p => [...p.pr, ...p.er, ...p.attachments])]) known.set(c.id, c);
   const value = (id?: string) => { const c = id ? known.get(id) : undefined; return c ? pointValue(c) : 0; };
   const byValue = (list: GameAction[], dir: 1 | -1) => list.slice().sort((a, b) => dir * (value(a.cardId) - value(b.cardId)))[0];
   const first = (type: GameAction['type'], mode?: string) => actions.find(a => a.type === type && (mode === undefined || a.mode === mode));

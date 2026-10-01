@@ -510,6 +510,12 @@ span.card { cursor: default; }
 .fc-tag { font-size: .58rem; font-weight: 800; letter-spacing: .04em; background: rgba(8, 11, 26, .9); border-radius: 4px; padding: 0 .3rem; max-width: 100%; }
 .fc-tag-jacked { background: rgba(90, 42, 112, .9); color: #f2d3f4; }
 .fc-tag-tapped { background: rgba(96, 34, 46, .9); color: #ffc9cd; }
+/* Jack Attachments tuck behind their host's corner — they occupy no slot of their own (§12). */
+.fc-attach { position: absolute; right: -6%; bottom: -10%; z-index: 2; width: 30%; filter: drop-shadow(0 3px 5px rgba(0, 0, 0, .6)); }
+.fc-er .fc-attach { width: 52%; right: -8%; bottom: -6%; }
+.fc-attach .card { width: 100%; height: auto; aspect-ratio: 62 / 86; font-size: .55rem; padding: 1px 2px; border-radius: 4px; }
+.fc-attach:hover { z-index: 4; }
+.fc-card-wrap:has(> .fc-attach:hover) > .card, .fc-card-wrap > .card:hover ~ .fc-attach .card { box-shadow: 0 0 0 3px rgba(216, 154, 255, .55), 0 0 18px rgba(178, 102, 255, .4); }
 .fc-empty { color: rgba(168, 181, 232, .6); font-size: .8rem; font-style: italic; }
 
 /* Line of Scrimmage */

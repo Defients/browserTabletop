@@ -1,5 +1,5 @@
 import type { GameAction, GameEvent, GameState } from './types.js';
-import { applyGame, assertGameIntegrity, availableActions, score } from './engine.js';
+import { applyGame, assertGameIntegrity, availableActions, normalizeGameState, score } from './engine.js';
 import { fixture, seeded } from './fixtures.js';
 
 /**
@@ -188,6 +188,7 @@ export function resumeLesson(text: string): LessonState {
   const v = JSON.parse(text) as LessonState;
   if (!v || v.version !== 1 || typeof v.id !== 'string' || !Array.isArray(v.observed) || typeof v.moves !== 'number') throw new Error('Saved lesson is unreadable.');
   byId(v.id);
+  normalizeGameState(v.game);
   assertGameIntegrity(v.game);
   return { ...v, completed: byId(v.id).complete(v) };
 }

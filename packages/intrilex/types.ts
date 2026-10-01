@@ -28,7 +28,16 @@ export interface Choice {
 /** Source of a resolving effect paused by a choice or generated child play; goes to GY when its resolution completes. */
 export interface Suspended { card?: GameCard; depth: number; task?: Choice; theft?: [number, number] }
 
-export interface GamePlayer { hand: GameCard[]; pr: GameCard[]; er: GameCard[]; goal: number; quick2Used: boolean; disrupted: MiniTurnType[]; swapUsed?: boolean; quickQUsed?: boolean; courtUsed?: boolean; tenUsed?: boolean; ultraUsed?: boolean; skips?: number; starts?: number }
+export interface GamePlayer {
+  hand: GameCard[]; pr: GameCard[]; er: GameCard[];
+  /**
+   * Jack Attachments keyed to their host via `hostId` (§12, §26 J). The host itself lives in this
+   * player's `pr` or `er`; the attachment is never an ER occupant or a free-standing permanent.
+   * Optional for serialized states written before this registry existed (see `normalizeGameState`).
+   */
+  attachments?: GameCard[];
+  goal: number; quick2Used: boolean; disrupted: MiniTurnType[]; swapUsed?: boolean; quickQUsed?: boolean; courtUsed?: boolean; tenUsed?: boolean; ultraUsed?: boolean; skips?: number; starts?: number;
+}
 
 export type GameEvent =
   | { t: 'declare'; p: number; type: ActionType; mode?: string; rank?: Rank; miniTurn?: MiniTurnType }
@@ -57,7 +66,7 @@ export interface GameState {
   history: string[]; events: GameEvent[]; seq: number;
 }
 
-export interface PlayerView { handCount: number; pr: GameCard[]; er: GameCard[]; goal: number; score: number; guard: boolean; disrupted: MiniTurnType[]; quick2Used: boolean; revealedHand?: GameCard[]; swapUsed?: boolean; skips?: number }
+export interface PlayerView { handCount: number; pr: GameCard[]; er: GameCard[]; attachments: GameCard[]; goal: number; score: number; guard: boolean; disrupted: MiniTurnType[]; quick2Used: boolean; revealedHand?: GameCard[]; swapUsed?: boolean; skips?: number }
 export interface GameView {
   profile: GameState['profile']; you: number | null;
   players: PlayerView[]; hand: GameCard[]; deckCount: number; graveyard: GameCard[];

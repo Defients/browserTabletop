@@ -1,5 +1,5 @@
 import type {
-  ActionType, Choice, ChoiceKind, GameAction, GameCard, GameEvent, GameState, GameView, MiniTurnType, PendingClass,
+  ActionType, Choice, ChoiceKind, GameAction, GameCard, GameEvent, GamePlayer, GameState, GameView, MiniTurnType, PendingClass,
   Random, Rank, StackItem, Suit,
 } from './types.js';
 import { RULES } from './rules.js';
@@ -46,7 +46,7 @@ function spendMini(s: GameState) { s.miniTurns--; if (full(s)) s.miniTurnsUsed =
 /** Every physical card, wherever it currently is (including cards held on the stack or by a choice). */
 export function everyCard(s: GameState): GameCard[] {
   return [
-    ...s.players.flatMap(p => [...p.hand, ...p.pr, ...p.er]), ...s.deck, ...s.graveyard,
+    ...s.players.flatMap(p => [...p.hand, ...p.pr, ...anchorsOf(p), ...attachmentsOf(p)]), ...s.deck, ...s.graveyard,
     ...(s.exile ?? []), ...(s.swapBar ?? []).map(x => x.card),
     ...s.stack.flatMap(sources), ...(s.choice?.held ? s.choice.cards : []), ...s.suspended.flatMap(x => [...(x.card ? [x.card] : []), ...(x.task?.held ? x.task.cards : [])]),
   ];
@@ -94,9 +94,33 @@ function log(g: G, line: string) { g.s.history.push(line); }
 function event(g: G, e: GameEvent) { g.s.events.push(e); }
 const P = (p: number) => `Player ${p + 1}`;
 
-interface Located { card: GameCard; player: number; row: 'pr' | 'er' }
+/**
+ * §12/§26 J: a Jack Attachment is registered under its controller's `attachments`, keyed to the
+ * host via `hostId`. It is never an ER occupant — the host itself stays in the controller's `pr`
+ * (normal J) or `er` (J♠ mode). Serialized states written before this registry existed carried
+ * attached Jacks inside `er`; read paths tolerate both shapes, and `normalizeGameState` migrates.
+ */
+const attachmentsOf = (pl: GamePlayer): GameCard[] => pl.attachments ?? pl.er.filter(c => !!c.hostId);
+const attachZone = (pl: GamePlayer): GameCard[] => (pl.attachments ??= []);
+/** True ER occupants. In legacy payloads attached Jacks still sit inside `er`; exclude them. */
+const anchorsOf = (pl: GamePlayer): GameCard[] => (pl.attachments === undefined ? pl.er.filter(c => !c.hostId) : pl.er);
+
+/** Migrate pre-registry payloads: attached Jacks were stored inside `er`. Idempotent. */
+export function normalizeGameState(s: GameState): GameState {
+  for (const pl of s.players) {
+    pl.attachments ??= [];
+    for (const c of [...pl.er]) if (c.hostId) { pl.er.splice(pl.er.indexOf(c), 1); pl.attachments.push(c); }
+  }
+  return s;
+}
+
+interface Located { card: GameCard; player: number; row: 'pr' | 'er' | 'attached' }
 function onTable(s: GameState): Located[] {
-  return s.players.flatMap((pl, player) => [...pl.pr.map(card => ({ card, player, row: 'pr' as const })), ...pl.er.map(card => ({ card, player, row: 'er' as const }))]);
+  return s.players.flatMap((pl, player) => [
+    ...pl.pr.map(card => ({ card, player, row: 'pr' as const })),
+    ...anchorsOf(pl).map(card => ({ card, player, row: 'er' as const })),
+    ...attachmentsOf(pl).map(card => ({ card, player, row: 'attached' as const })),
+  ]);
 }
 const locate = (s: GameState, id: string | undefined) => onTable(s).find(l => l.card.id === id);
 
@@ -104,7 +128,7 @@ const locate = (s: GameState, id: string | undefined) => onTable(s).find(l => l.
 
 export function score(s: GameState, p: number): number {
   const pl = s.players[p]!;
-  return pl.pr.reduce((n, c) => (c.tapped ? n : n + POINTS[c.rank] + (pl.er.some(j => j.rank === 'J' && j.hostId === c.id && !j.tapped) ? 1 : 0)), 0);
+  return pl.pr.reduce((n, c) => (c.tapped ? n : n + POINTS[c.rank] + (attachmentsOf(pl).some(j => j.rank === 'J' && j.hostId === c.id && !j.tapped) ? 1 : 0)), 0);
 }
 /** §13: an untapped Queen Anchor protects its controller's OTT cards other than itself. */
 export function guarded(s: GameState, controller: number, card?: GameCard): boolean {
@@ -498,7 +522,7 @@ export interface CreateOptions { random?: Random; firstPlayer?: number; profile?
 function emptyState(): GameState {
   return {
     version: 2, profile: 'intrilex-first-contact',
-    players: [0, 1].map(() => ({ hand: [], pr: [], er: [], goal: GOAL, quick2Used: false, disrupted: [] })),
+    players: [0, 1].map(() => ({ hand: [], pr: [], er: [], attachments: [] as GameCard[], goal: GOAL, quick2Used: false, disrupted: [] })),
     deck: [], graveyard: [], activePlayer: 0, phase: 'action', miniTurns: 1, turn: 1,
     stack: [], priority: 0, passes: 0, choice: null, suspended: [], boardLock: null, exhausted: null, winner: null,
     history: [], events: [], seq: 0,
@@ -548,7 +572,7 @@ export function applyGame(state: GameState, p: number, input: unknown, random: R
   const wanted = parseAction(input);
   const legal = availableActions(state, p).find(a => actionKey(a) === actionKey(wanted));
   if (!legal) fail('ACTION_UNAVAILABLE', 'That action is not legal now. Check whose decision it is, the remaining Action, Guard, immunities, Board Lock and First Contact restrictions.');
-  const g: G = { s: structuredClone(state), random };
+  const g: G = { s: normalizeGameState(structuredClone(state)), random };
   perform(g, p, legal!);
   settle(g);
   return g.s;
@@ -712,26 +736,30 @@ function setChoice(g: G, c: Omit<Choice, 'count'> & { count?: number }) {
 function removeFromBoard(g: G, id: string): GameCard | undefined {
   const l = locate(g.s, id);
   if (!l) return undefined;
-  const row = g.s.players[l.player]![l.row];
+  const pl = g.s.players[l.player]!;
+  const row = l.row === 'attached' ? attachZone(pl) : pl[l.row];
   row.splice(row.indexOf(l.card), 1);
   if (l.card.hostId) restoreHost(g, l.player, l.card.hostId);
   return l.card;
 }
-/** §12 step 4: the former host returns to its original owner's matching row. */
+/** §12 step 4: the former host returns to its original owner's matching row (PR or ER). */
 function restoreHost(g: G, controller: number, hostId: string) {
-  const pr = g.s.players[controller]!.pr;
-  const host = pr.find(c => c.id === hostId);
-  if (host && host.owner >= 0 && host.owner !== controller) { pr.splice(pr.indexOf(host), 1); g.s.players[host.owner]!.pr.push(host); }
+  const pl = g.s.players[controller]!;
+  for (const row of ['pr', 'er'] as const) {
+    const host = pl[row].find(c => c.id === hostId);
+    if (host && host.owner >= 0 && host.owner !== controller) { pl[row].splice(pl[row].indexOf(host), 1); g.s.players[host.owner]![row].push(host); return; }
+  }
 }
 /** §12: after any change, sever Jacks whose host is no longer in their controller's PR or (J♠) ER. */
 function checkAttachments(g: G) {
   for (let p = 0; p < 2; p++) {
     const pl = g.s.players[p]!;
-    for (const j of [...pl.er]) if (j.hostId && !pl.pr.some(c => c.id === j.hostId) && !pl.er.some(c => c !== j && c.id === j.hostId)) {
-      pl.er.splice(pl.er.indexOf(j), 1); toGraveyard(g, j); log(g, `${P(p)}'s Jack lost its host and is Scrapped.`);
+    const atts = attachZone(pl);
+    for (const j of [...atts]) if (!pl.pr.some(c => c.id === j.hostId) && !pl.er.some(c => c.id === j.hostId)) {
+      atts.splice(atts.indexOf(j), 1); toGraveyard(g, j); log(g, `${P(p)}'s Jack lost its host and is Scrapped.`);
     }
-    for (const c of [...pl.pr]) if (c.owner >= 0 && c.owner !== p && !pl.er.some(j => j.hostId === c.id)) { pl.pr.splice(pl.pr.indexOf(c), 1); g.s.players[c.owner]!.pr.push(c); }
-    for (const c of [...pl.er]) if (!c.hostId && c.owner >= 0 && c.owner !== p && !pl.er.some(j => j.hostId === c.id)) { pl.er.splice(pl.er.indexOf(c), 1); g.s.players[c.owner]!.er.push(c); }
+    for (const c of [...pl.pr]) if (c.owner >= 0 && c.owner !== p && !atts.some(j => j.hostId === c.id)) { pl.pr.splice(pl.pr.indexOf(c), 1); g.s.players[c.owner]!.pr.push(c); }
+    for (const c of [...pl.er]) if (!c.hostId && c.owner >= 0 && c.owner !== p && !atts.some(j => j.hostId === c.id)) { pl.er.splice(pl.er.indexOf(c), 1); g.s.players[c.owner]!.er.push(c); }
   }
 }
 
@@ -885,7 +913,7 @@ function resolveEffect(g: G, item: StackItem, p: number, enemy: number, c: GameC
       // A previous Jack on this host loses its relationship and is severed by checkAttachments.
       s.players[p]!.pr.push(host);
       clean(c); c.owner = p; c.hostId = host.id;
-      s.players[p]!.er.push(c);
+      attachZone(s.players[p]!).push(c);
       log(g, `${P(p)} Jacks ${cardName(host)} (+1 Point while attached).`);
       event(g, { t: 'attach', p, host: host.rank });
       return;
@@ -1017,7 +1045,7 @@ function resolveEffect(g: G, item: StackItem, p: number, enemy: number, c: GameC
       const t = l ? removeFromBoard(g, l.card.id)! : undefined;
       if (t && l) {
         clean(t); t.owner = p; t.tapped = true; t.tapUntil = 'hold'; t.holdCast = p;
-        s.players[p]![l.row].push(t);
+        s.players[p]![l.row === 'attached' ? 'er' : l.row].push(t);
         log(g, `${P(p)} commandeers ${cardName(t)} — held tapped under their control.`);
       }
       break;
@@ -1162,14 +1190,17 @@ function resolveEffect(g: G, item: StackItem, p: number, enemy: number, c: GameC
     }
     case 'attach-er': {
       const host = locate(s, item.action.targetId);
-      if (host && host.row === 'er' && isAnchor(host.card)) {
-        clean(c); c.owner = p; c.hostId = host.card.id;
-        s.players[p]!.er.push(c);
-        log(g, `${P(p)} Jacks the Anchor ${cardName(host.card)}.`);
-        event(g, { t: 'attach', p, host: host.card.rank });
-        return;
-      }
-      break;
+      if (!(host && host.row === 'er' && isAnchor(host.card) && host.player !== p)) return fizzle(g, item, c);
+      // §26 J♠: control of the Anchor moves to the Jacker (its value, Guard and Start triggers
+      // benefit them). No re-entry — the card is not cleaned and no entry abilities fire.
+      const from = s.players[host.player]!;
+      from.er.splice(from.er.indexOf(host.card), 1);
+      s.players[p]!.er.push(host.card);
+      clean(c); c.owner = p; c.hostId = host.card.id;
+      attachZone(s.players[p]!).push(c);
+      log(g, `${P(p)} Jacks the Anchor ${cardName(host.card)}.`);
+      event(g, { t: 'attach', p, host: host.card.rank });
+      return;
     }
     case 'tempo': {
       s.players[p]!.tenUsed = true;
@@ -1424,7 +1455,7 @@ export function projectGame(s: GameState, you: number | null): GameView {
   const q = s.choice;
   return {
     profile: s.profile, you: seat,
-    players: s.players.map((pl, i) => ({ handCount: pl.hand.length, pr: structuredClone(pl.pr), er: structuredClone(pl.er), goal: pl.goal, score: score(s, i), guard: guarded(s, i), disrupted: [...pl.disrupted], quick2Used: pl.quick2Used })),
+    players: s.players.map((pl, i) => ({ handCount: pl.hand.length, pr: structuredClone(pl.pr), er: structuredClone(anchorsOf(pl)), attachments: structuredClone(attachmentsOf(pl)), goal: pl.goal, score: score(s, i), guard: guarded(s, i), disrupted: [...pl.disrupted], quick2Used: pl.quick2Used })),
     hand: seat === null ? [] : structuredClone(s.players[seat]!.hand),
     deckCount: s.deck.length, graveyard: structuredClone(s.graveyard),
     exile: full(s) ? structuredClone(s.exile ?? []) : undefined,
@@ -1486,7 +1517,15 @@ export function assertGameIntegrity(s: GameState): void {
   if (cards.length !== 54) throw new Error(`Expected 54 cards, found ${cards.length}`);
   if (new Set(cards.map(c => c.id)).size !== 54) throw new Error('Duplicate card handles');
   if (new Set(cards.map(c => `${c.rank}${c.suit}`)).size !== 54) throw new Error('Duplicate or missing physical cards');
-  for (let p = 0; p < 2; p++) for (const j of s.players[p]!.er) if (j.hostId && !s.players[p]!.pr.some(c => c.id === j.hostId)) throw new Error('Dangling Jack');
+  // §12 attachment invariants: no Jack sits in ER, every attachment has exactly one live host row.
+  for (let p = 0; p < 2; p++) {
+    const pl = s.players[p]!;
+    for (const c of pl.er) if (c.hostId) throw new Error(`Attachment ${cardName(c)} occupies an Enduring Row slot`);
+    for (const j of attachmentsOf(pl)) {
+      if (!j.hostId) throw new Error(`Attachment ${cardName(j)} has no host`);
+      if (!pl.pr.some(c => c.id === j.hostId) && !pl.er.some(c => c.id === j.hostId)) throw new Error(`Dangling Jack: ${cardName(j)}`);
+    }
+  }
 }
 
 export type { ChoiceKind };

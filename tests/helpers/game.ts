@@ -28,7 +28,10 @@ export function passAll(s: GameState): GameState {
 }
 export const zoneOf = (s: GameState, card: string): string => {
   const c = findCard(s, card)!;
-  for (let p = 0; p < 2; p++) for (const z of ['hand', 'pr', 'er'] as const) if (s.players[p]![z].includes(c)) return `${z}-${p}`;
+  for (let p = 0; p < 2; p++) {
+    for (const z of ['hand', 'pr', 'er'] as const) if (s.players[p]![z].includes(c)) return `${z}-${p}`;
+    if ((s.players[p]!.attachments ?? []).includes(c)) return `att-${p}`;
+  }
   if (s.deck.includes(c)) return `deck-${s.deck.indexOf(c)}`;
   if (s.graveyard.includes(c)) return 'gy';
   return 'elsewhere';
